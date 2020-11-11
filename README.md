@@ -1,5 +1,5 @@
 # post_wan
-This python3 library provides classes for tight-binding calculations with Wannier Hamiltonians, but can easily applied to general user-defined tight-binding Hamiltonians. The object oriented usage allows for 
+This python3 library provides classes for tight-binding calculations with Wannier Hamiltonians, but can easily applied to general user-defined tight-binding Hamiltonians. The object oriented usage allows for maximal flexibility.
 
 ## Capabilities
 * Calculation of the following expectation values:
