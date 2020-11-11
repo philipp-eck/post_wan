@@ -1,0 +1,14 @@
+# ignore all output in examples dir and ipython checkpoints
+examples/*/*dat
+examples/*/*.ipynb_checkpoints
+examples/*/*log
+examples/*/*gnu
+examples/*/*pdf
+examples/for_Domenico/
+
+# ignore key-note documentation
+Documentation.key
+
+__pycache__
+test_ham
+junk
