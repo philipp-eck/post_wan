@@ -188,12 +188,43 @@ class hamiltonian:
 
         output.close()
 
+    def get_H_R(self,R,part="complex",f="6.3f"):
+        '''Returns H(R) for given R.
+           part = {"complex","real","imag"}
+        '''
+        R_index = np.argwhere(np.all((self.R[:,:3]-R)==0, axis=1))
+        H_R = self.hr[R_index][0,0]
+
+        if part == "complex":
+            def print_H_R(i,j):
+                fs = "{:"+f+"}{:"+f+"} "
+                print(fs.format(H_R[i,j].real,H_R[i,j].imag),end="")
+        elif part == "real":
+            def print_H_R(i,j):
+                fs = "{:"+f+"} "
+                print(fs.format(H_R[i,j].real),end="")
+        elif part == "imag":
+            def print_H_R(i,j):
+                fs = "{:"+f+"} "
+                print(fs.format(H_R[i,j].imag),end="")
+
+        for i in range(self.n_bands):
+            for j in range(self.n_bands):
+                print_H_R(i,j)
+            print("")
+        return H_R
+
+
+
 if __name__== "__main__":
     print("Testing class hamiltonian...")
     real_vec = np.array([[3.0730000,    0.0000000,    0.0000000],[-1.5365000,    2.6612960,    0.0000000],[0.0000000,    0.0000000,   20.0000000]])
     my_ham = hamiltonian("test_ham/TaAs.dat",real_vec,True)
     print("Instance attributes of the generated Hamiltonian")
     print(my_ham.__dict__.keys())
+    print('Testing function "get_H_R".')
+    R = np.array([0,0,0])
+    my_ham.get_H_R(R)
     print("Testing Fourier transform at the Gamma-point")
     gamma = np.array([0,0,0])
     hk = my_ham.hk(gamma)
