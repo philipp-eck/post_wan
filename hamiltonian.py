@@ -168,7 +168,7 @@ class hamiltonian:
         '''Performs Fourier transformation on a Gamma-centered Monkhorst grid
            and writes output in w2-readable format.'''
 
-        def write_Hk(kpoint,hk,fs_hk):
+        def write_Hk(kpoint,hk):
             output.write('{k[0]:9.4f}{k[1]:9.4f}{k[2]:9.4f} \n'.format(k=kpoint))
             for i in range(self.n_bands):
                 for j in range(self.n_bands):
@@ -179,12 +179,9 @@ class hamiltonian:
         output = open(filename+".dat","w")
         #write header
         output.write("{:9d}{:9d}{:9d}\n".format(np.shape(mh_grid.k_space_red)[0],self.n_bands,self.n_bands))
-        fs_hk = ''
-        for i in range(self.n_bands):
-            fs_hk += '{h['+str(i)+']:9.4f}'
         for i_k in range(np.shape(mh_grid.k_space_red)[0]):
             hk = self.hk(mh_grid.k_space_red[i_k])
-            write_Hk(mh_grid.k_space_red[i_k],hk,fs_hk)
+            write_Hk(mh_grid.k_space_red[i_k],hk)
 
         output.close()
 
