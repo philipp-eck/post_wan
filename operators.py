@@ -439,7 +439,6 @@ class operator:
         #     \__\ or /__/  (Bravais vectors starting in the lower-left corner.
 
         if np.dot(self.ham.bra_vec[0],self.ham.bra_vec[1]) < 0:
-           print(self.ham.bra_vec[0],self.ham.bra_vec[1])
            R = np.array([[[0,0,0],[1,0,0],[1,1,0]],   # 1.Euler point
                          [[0,0,0],[1,1,0],[0,1,0]]])   # 2.Euler point
         elif np.dot(self.ham.bra_vec[0],self.ham.bra_vec[1]) < 0:
@@ -481,8 +480,6 @@ class operator:
                P[:,ind+1,ind+1] = p2* 1j/np.sqrt(2)
                ind += 2
 
-        print(P[0,:,:,-1])
-        print(P[1,:,:,-1])
         #Expectation value. Note: <P|Psi> is calculated
         if k.ndim == 2:
             P_Psi = np.einsum("EijK,Kjk->KEik",P,evecs)
