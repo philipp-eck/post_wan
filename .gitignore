@@ -9,6 +9,10 @@ examples/for_Domenico/
 # ignore key-note documentation
 Documentation.key
 
+# ignore test_data
+test_data
+
 __pycache__
 test_ham
 junk
+

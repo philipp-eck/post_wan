@@ -304,9 +304,10 @@ class z2_wcc:
                 k[:,f] = np.linspace(0,1,self.n_pump[1],endpoint=False)
                 k[:,n] = k_normal
                 hk = np.zeros((self.n_pump[1],self.ham.n_bands,self.ham.n_bands),dtype=complex)
-                for k2 in range(self.n_pump[1]):
-                    hk[k2] = self.ham.hk(k[k2])
-                evals,evecs = np.linalg.eigh(hk,UPLO="U")
+                #for k2 in range(self.n_pump[1]):
+                #    hk[k2] = self.ham.hk(k[k2])
+                
+                evals,evecs = np.linalg.eigh(self.ham.hk(k),UPLO="U")
                 M = np.zeros((self.ham.n_elec,self.ham.n_elec),dtype="complex")+np.identity(self.ham.n_elec)
                 for k2 in range(self.n_pump[1]-1):
                     M = np.einsum("ij,jk",M,np.einsum("ji,jk->ik",np.conj(evecs[k2,:,:self.ham.n_elec]),evecs[k2+1,:,:self.ham.n_elec]))
@@ -319,7 +320,8 @@ class z2_wcc:
                 y = np.log(y)
                 self.wcc[k3,k1]=np.imag(y)%(2*np.pi)/(2*np.pi)
             #sort for calculating largest gap
-            self.wcc[k3] = np.sort(self.wcc[k3],axis=1)
+            #likely not needed
+            #self.wcc[k3] = np.sort(self.wcc[k3],axis=1)
             gap = (np.roll(self.wcc[k3],-1,axis=1)+1-self.wcc[k3])%1
             gap_i = np.argmax(gap,axis=1)
             for k1 in range(self.n_pump[0]):
@@ -329,7 +331,9 @@ class z2_wcc:
             for k1 in range(self.n_pump[0]):
                 del_m = 1
                 k = (k1+1)%self.n_pump[0]
-                g = np.sin(2*np.pi*(self.gap[k3,k,None]-self.gap[k3,k1,None])) + np.sin(2*np.pi*(self.wcc[k3,k1]-self.gap[k3,k,None])) + np.sin(2*np.pi*(self.gap[k3,k1,None]-self.wcc[k3,k1,None]))
+                g = np.sin(2*np.pi*(self.gap[k3,k,None]-self.gap[k3,k1,None])) + np.sin(2*np.pi*(self.wcc[k3,k]-self.gap[k3,k,None])) + np.sin(2*np.pi*(self.gap[k3,k1,None]-self.wcc[k3,k,None]))
+                if 0 in g:
+                   print("O in directed area encountered, be cautious, check wccs and gap!!!")
                 g[g>=0] = 1
                 g[g<0]  = -1
                 del_m = np.prod(g)
@@ -357,9 +361,14 @@ if __name__== "__main__":
     prefix = "test_data/"
     my_ham = hamiltonian("test_ham/hr_In_soc.dat",real_vec,True,basis,ef)
     print("Creating k_space...")
-    vecs=np.array([[2/3,-1/3,0],[-2/3,1/3,0]])
-    points = 31
+    vecs=np.array([[0,0,0],[1/3,1/3,0],[2/3,-1/3,0]])
+    points = 3 
     path = k_space("path","red",vecs,my_ham.bra_vec,points)
+    print("Testing operator 'E_triang'...")
+    op_types_k = ["E_triang"]
+    op_types   = ["L"] 
+    o_triang = observables(my_ham,path,op_types,OP_TYPES_K=op_types_k,PREFIX=prefix) 
+    o_triang.calculate_ops()
     print("Creating Spin-observable...")
     op_types = ["S"]
     o_spin = observables(my_ham,path,op_types,PREFIX=prefix)

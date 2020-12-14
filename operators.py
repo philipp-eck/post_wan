@@ -7,7 +7,7 @@ class operator:
         When called, the class generates an operator with all required attributes.
         The object operator is meant to be passed to create the dict observables.
         Instance attributes:
-        op_type       # Type of operator: {S,L,J,BC,BC_mag,Orb_SOC_inv}
+        op_type       # Type of operator: {S,L,J,BC,BC_mag,Orb_SOC_inv,E_triang}
         op            # Generated operator
         val           # Array containing the output [kpoint,dim,n_bands]
         val_b_int     # Band integrated output
@@ -45,6 +45,8 @@ class operator:
             self.set_BC_mag_op()
         elif self.op_type == "Orb_SOC_inv":
             self.set_Orb_SOC_inv()
+        elif self.op_type == "E_triang":
+            self.set_E_triang()
         else:
             ### Create empty k-independent operator
             print('Creating empty operator "'+self.op_type+'".')
@@ -100,6 +102,12 @@ class operator:
         self.op = self.Orb_SOC_inv_op
         self.expval = self.Orb_SOC_inv_expval
         self.expval_all_k = self.Orb_SOC_inv_expval
+
+    def set_E_triang(self):
+        '''Sets the operator for calculating the Euler localization in triangular lattices.'''
+        self.op = self.E_triang_op
+        self.expval = self.E_triang_expval
+        self.expval_all_k = self.E_triang_expval
     ####Operators
 
     def S_op(self,k=None,evals=None,evecs=None):
@@ -357,7 +365,7 @@ class operator:
            We compute with Psi (soc) and psi (wo soc) the expectation value:
            <O_nk> = |<Psi_nk|Sum_i^n_occ |psi_ik><psi_ik|Psi_nk>
            We repeat this by projecting onto the unoccupied states
-           Summing over both projectors is a complete projection --> Has to yield 1!!!!
+           Summation over both projectors is a complete projection --> Has to yield 1!!!!
         '''
         if k.ndim == 1:
 
@@ -407,9 +415,82 @@ class operator:
         
         return out
 
+    def E_triang_op(self,k=None,evals=None,evecs=None):
+        '''Generates an empty array.
+           Expectation value is calculated with E_triang_expval.
+        '''
+        e_triang_op = np.zeros((2,self.ham.n_bands))
+        return e_triang_op
 
+    def E_triang_expval(self,k=None,evals=None,evecs=None):
+        '''Calculates the Euler localization by using the projector:
 
+           P = Sum Sum exp[i(l_z*phi_R+k*R)]  Y^l_z><Y^l_z|
+               l_z   R
 
+           where phi_R is the polar angle defining the orientation of the Euler point w.r.t. site located at R.
+           Y^l_z are spherical harmonics, here we use the eigenbasis transformation used also for the L-operator.
+           i*k*R denotes the bloch phase.
+           !!!ATTENTION: Assumes PBCs in the xy-plane!!! 
+        '''
+
+        # Define atom site orientation by calculating the Bravais vec orientation.
+        # uc: __       __
+        #     \__\ or /__/  (Bravais vectors starting in the lower-left corner.
+
+        if np.dot(self.ham.bra_vec[0],self.ham.bra_vec[1]) < 0:
+           print(self.ham.bra_vec[0],self.ham.bra_vec[1])
+           R = np.array([[[0,0,0],[1,0,0],[1,1,0]],   # 1.Euler point
+                         [[0,0,0],[1,1,0],[0,1,0]]])   # 2.Euler point
+        elif np.dot(self.ham.bra_vec[0],self.ham.bra_vec[1]) < 0:
+           R = np.array([[[0,0,0],[1,0,0],[0,1,0]],   # 1.Euler point
+                         [[1,0,0],[1,1,0],[0,1,0]]])   # 2.Euler point
+           print("Not thoroughly tested for sharp angle Bravais lattice definition!!!")
+        else:
+           print("Bravais vectors are orthogonal, is this a triangular lattice?!!!")
+
+        phi = np.arange(3)/3
+        # we rotate the L-operator in the tesseral harmonics eigenbasis
+        ### build up rotation matrix
+        if k.ndim == 2:
+            P = np.zeros((2,self.ham.n_bands,self.ham.n_bands,np.shape(k)[0]), dtype=complex)
+        else:
+            P = np.zeros((2,self.ham.n_bands,self.ham.n_bands), dtype=complex)
+        def phase(lz,R,k):
+            if k.ndim == 2:
+                out = np.exp(1j*2*np.pi*(lz*phi[None,None,:]+np.einsum("Kj,Eij->EKi",k,R))).sum(axis=2)/3.0
+            else:
+                out = np.exp(1j*2*np.pi*(lz*phi[None,:]+np.einsum("j,Eij->Ei",k,R))).sum(axis=1)/3.0
+            return out
+
+        if self.ham.spin == False:
+            basis = self.ham.basis
+        else:
+            basis = np.append(self.ham.basis,self.ham.basis)
+
+        ind = 0
+        for j in basis:
+            P[:,ind,ind] = 0
+            ind += 1
+            for lz in range(1,j+1,1):
+               p1 = phase(lz,R,k)
+               P[:,ind  ,ind  ] = p1*(-1)**lz /np.sqrt(2)
+               P[:,ind  ,ind+1] = p1*(-(-1)**lz) *1j /np.sqrt(2) ### follows from backtransform
+               p2 = phase(-lz,R,k)
+               P[:,ind+1,ind  ] = p2*  1/np.sqrt(2)
+               P[:,ind+1,ind+1] = p2* 1j/np.sqrt(2)
+               ind += 2
+
+        print(P[0,:,:,-1])
+        print(P[1,:,:,-1])
+        #Expectation value. Note: <P|Psi> is calculated
+        if k.ndim == 2:
+            P_Psi = np.einsum("EijK,Kjk->KEik",P,evecs)
+            exp_val = np.einsum("KEii->KEi",np.einsum("KEji,KEjk->KEik",P_Psi.conj(),P_Psi,optimize=True),optimize=True)
+        else:
+            P_Psi = np.einsum("Eij,jk->Eik",P,evecs)
+            exp_val = np.einsum("Eii->Ei",np.einsum("Eji,Kjk->Eik",P_Psi.conj(),P_Psi,optimize=True),optimize=True)
+        return np.abs(exp_val)
     def initialize_val(self,nk):
         '''Initializes the val array in which the calculated expecation values are saved.
            Creates format specifier string.
@@ -562,4 +643,6 @@ if __name__== "__main__":
     self_def_op.op = np.array([np.eye(my_ham.n_bands),np.eye(my_ham.n_bands)])
     self_def_op.initialize_val(5)
     print(np.shape(self_def_op.op))
-    
+
+    print('Testing operator "E_triang"...')
+    E_triang_op =  operator("E_triang",my_ham) 
