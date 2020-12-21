@@ -61,6 +61,8 @@ class k_space:
 
         if self.k_type == "monkhorst":
             self.k_space_red = self.Monkhorst(self.vecs)
+            self.k_space_car = self.red_to_car(self.k_space_red)
+            self.k_kind = "mesh"
            #self.k_space_car = self.red_to_car(bra_vec,self.k_space_red)
 
         if self.k_type == "self-defined":

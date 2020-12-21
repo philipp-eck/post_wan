@@ -1,6 +1,7 @@
 #! /bin/python
 ### operator class, sub-class of observables. 
 import numpy as np
+import scipy.ndimage
 from hamiltonian import hamiltonian 
 class operator:
     ''' operator class, sub-class of observables.
@@ -531,6 +532,17 @@ class operator:
             occ[evals <= 0] = 1
             val_int = np.multiply(self.val,occ[:,None])
             self.val_b_int = np.sum(val_int, axis = 2)
+
+
+    def k_int(self,evals,nbins=1000,sigma=0.1):
+        '''Performs k-integration by using a histogram.'''
+        self.val_k_int = np.zeros((np.shape(self.val)[1]+2,nbins))
+        dos = np.histogram(evals,nbins)
+        self.val_k_int[0] = (dos[1][1:]+dos[1][:-1])/2
+        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma)
+        for dim in range(np.shape(self.val)[1]):
+            self.val_k_int[dim+2] = scipy.ndimage.filters.gaussian_filter1d(np.histogram(evals,nbins,weights=self.val[:,dim])[0],sigma)
+           
 
 
     #### Further post-processing

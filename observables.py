@@ -22,7 +22,7 @@ class observables:
         hamiltonian   # Hamiltonian
         k_space       # k_space on which the properties are calculated
         op_types      # List containing all operators to be calculated: {S,L,J}
-        op_types_k    # List containing all k-dependent operators to be calculated: {BC,BC_mag,Orb_SOC_inv}
+        op_types_k    # List containing all k-dependent operators to be calculated: {BC,BC_mag,Orb_SOC_inv,E_triang}
         ops           # Dictionary containing the operators
         evals         # Array containing all eigen-values
         evecs         # Array containing all eigen-vectors
@@ -169,6 +169,15 @@ class observables:
                 print("Running post-processing for operator "+op_type+".")
                 self.ops[op_type].post(self.evals)
 
+    def k_int(self,nbins,sigma,write=True):
+        '''Calculates k-integrated expecation values.'''
+        for op_type in self.op_types+self.op_types_k:
+            print("Calculating k-integrated values of "+op_type+".")
+            self.ops[op_type].k_int(self.evals,nbins,sigma)
+
+        if write==True:
+           self.write_k_int()
+
     def sphere_winding(self):
         '''Calculates the Pontryagin-index for the observables, calculated on a sphere.
            Requires 'k_type="sphere_ster_proj"' !!!
@@ -266,7 +275,16 @@ class observables:
         #val_k_int
         # to be written, not used yet...
 
-
+    def write_k_int(self):
+        for op_type in self.op_types+self.op_types_k:
+            if type(self.ops[op_type].val_k_int) ==  np.ndarray:
+                print("Writing k-integrated output for operator "+op_type+".")
+                f_ener = '{e:13.8f}'
+                f_spec = f_ener+self.ops[op_type].f_spec+' \n'
+                output = open(self.prefix+op_type+"_DOS.dat", "w")
+                for e_i in range(self.ops[op_type].val_k_int.shape[1]):
+                    output.write(f_spec.format(e=self.ops[op_type].val_k_int[0,e_i],d=self.ops[op_type].val_k_int[1:,e_i]))
+                output.close()
 
 class z2_wcc:
     '''Class for calculation Z_2 invariants following the approach of A. Soluyanov and D. Vanderbilt.
@@ -364,11 +382,14 @@ if __name__== "__main__":
     vecs=np.array([[0,0,0],[1/3,1/3,0],[2/3,-1/3,0]])
     points = 3 
     path = k_space("path","red",vecs,my_ham.bra_vec,points)
-    print("Testing operator 'E_triang'...")
+    print("Testing operator 'E_triang' and k-integration...")
+    nbins = 100
+    sigma = 0.1
     op_types_k = ["E_triang"]
     op_types   = ["L"] 
     o_triang = observables(my_ham,path,op_types,OP_TYPES_K=op_types_k,PREFIX=prefix) 
     o_triang.calculate_ops()
+    o_triang.k_int(nbins,sigma)
     print("Creating Spin-observable...")
     op_types = ["S"]
     o_spin = observables(my_ham,path,op_types,PREFIX=prefix)
