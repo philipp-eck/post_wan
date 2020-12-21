@@ -281,11 +281,11 @@ class observables:
                 print("Writing k-integrated output for operator "+op_type+".")
                 f_ener = '{e:13.8f}{dos:13.8f}'
                 f_spec = f_ener+self.ops[op_type].f_spec+' \n'
-                print(f_spec)
-                output = open(self.prefix+op_type+"_DOS.dat", "w")
-                for e_i in range(self.ops[op_type].val_k_int.shape[1]):
-                    output.write(f_spec.format(e=self.ops[op_type].val_k_int[0,e_i],dos=self.ops[op_type].val_k_int[1,e_i],d=self.ops[op_type].val_k_int[2:,e_i]))
-                output.close()
+               # output = open(self.prefix+op_type+"_DOS.dat", "w")
+               #for e_i in range(self.ops[op_type].val_k_int.shape[1]):
+               #    output.write(f_spec.format(e=self.ops[op_type].val_k_int[0,e_i],dos=self.ops[op_type].val_k_int[1,e_i],d=self.ops[op_type].val_k_int[2:,e_i]))
+                np.savetxt(self.prefix+op_type+"_DOS.dat",self.ops[op_type].val_k_int.transpose((1,0)),fmt='%16.6e')
+                #output.close()
 
 class z2_wcc:
     '''Class for calculation Z_2 invariants following the approach of A. Soluyanov and D. Vanderbilt.
