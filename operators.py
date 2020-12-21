@@ -337,9 +337,7 @@ class operator:
 
             #### Compute the denominator (E_m-E_n) and set diagonal to 1
             Em_En  = np.reshape(np.kron(np.ones(self.ham.n_bands),evals),(np.shape(k)[0],self.ham.n_bands,self.ham.n_bands))
-            print(Em_En[0,0])
             Em_En -= np.transpose(Em_En,(0,2,1))
-            print(Em_En[0,0])
             [np.fill_diagonal(Em_En[i],1) for i in range(k.shape[0])]
 
             n_del_m /= Em_En[:,None]
@@ -539,9 +537,9 @@ class operator:
         self.val_k_int = np.zeros((np.shape(self.val)[1]+2,nbins))
         dos = np.histogram(evals,nbins)
         self.val_k_int[0] = (dos[1][1:]+dos[1][:-1])/2
-        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma)
+        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma)/evals.shape[0]
         for dim in range(np.shape(self.val)[1]):
-            self.val_k_int[dim+2] = scipy.ndimage.filters.gaussian_filter1d(np.histogram(evals,nbins,weights=self.val[:,dim])[0],sigma)
+            self.val_k_int[dim+2] = scipy.ndimage.filters.gaussian_filter1d(np.histogram(evals,nbins,weights=self.val[:,dim])[0],sigma)/evals.shape[0]
            
 
 
