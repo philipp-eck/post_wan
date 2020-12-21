@@ -537,9 +537,9 @@ class operator:
         self.val_k_int = np.zeros((np.shape(self.val)[1]+2,nbins))
         dos = np.histogram(evals,nbins)
         self.val_k_int[0] = (dos[1][1:]+dos[1][:-1])/2
-        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma)/evals.shape[0]
+        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma)/evals.shape[0]*nbins
         for dim in range(np.shape(self.val)[1]):
-            self.val_k_int[dim+2] = scipy.ndimage.filters.gaussian_filter1d(np.histogram(evals,nbins,weights=self.val[:,dim])[0],sigma)/evals.shape[0]
+            self.val_k_int[dim+2] = scipy.ndimage.filters.gaussian_filter1d(np.histogram(evals,nbins,weights=self.val[:,dim])[0],sigma)/evals.shape[0]*nbins
            
 
 
