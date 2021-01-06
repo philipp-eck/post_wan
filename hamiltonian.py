@@ -50,6 +50,8 @@ class hamiltonian:
         self.spin    = SPIN
         if type(BASIS) == np.ndarray:
             self.basis   = np.array(BASIS,dtype="int32")
+        else:
+            self.basis = None
         self.ef      = EF
         self.n_elec  = N_ELEC
 

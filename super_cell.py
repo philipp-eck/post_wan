@@ -36,7 +36,10 @@ class super_cell:
         self.n_orb    = self.sup_dim*self.bulk_ham.n_orb
         self.n_bands  = self.sup_dim*self.bulk_ham.n_bands
         self.n_elec   = self.sup_dim*self.bulk_ham.n_elec
-        self.basis    = np.kron(np.ones(self.sup_dim),self.bulk_ham.basis).astype(int)
+        if self.bulk_ham.basis is not None:
+            self.basis    = np.kron(np.ones(self.sup_dim),self.bulk_ham.basis).astype(int)
+        else:
+            self.basis = None
         self.hr_spinless = None
         self.set_super_cell()
         if type(self.bulk_ham.bra_vec) != np.ndarray:

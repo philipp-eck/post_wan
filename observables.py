@@ -81,8 +81,9 @@ class observables:
         def expval_all_k(evecs,op):
             '''Calculates <Psi|Op|Psi> along all dimensions of the operator on all k-points.'''
            #val = np.einsum('...ii->...i',np.einsum('...ji,...jk->...ik',np.conj(evecs[:,None,:,:]),np.einsum('...ij,...jk->...ik',op,evecs[:,None,:,:]))).real
-            path = np.einsum_path('kdf,cde,kef->kcf',np.conj(np.array([evecs[0]])),op,np.array([evecs[0]]),optimize='optimal')[0]
-            val = np.einsum('kdf,cde,kef->kcf',np.conj(evecs),op,evecs,optimize=path).real
+           #path = np.einsum_path('kdf,cde,kef->kcf',np.conj(np.array([evecs[0]])),op,np.array([evecs[0]]),optimize='optimal')[0]
+           #val = np.einsum('kdf,cde,kef->kcf',np.conj(evecs),op,evecs,optimize=path).real
+            val = np.einsum('kdf,cde,kef->kcf',np.conj(evecs),op,evecs,optimize=True).real
             return val
 
         self.evals = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands))
