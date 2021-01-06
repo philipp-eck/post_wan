@@ -100,7 +100,7 @@ class hamiltonian:
         R = np.zeros((nR,4))
         R[:,0:3] = hr_full[:,0,0,0:3]
         R[:,3]   = weights
-        self.R   = R
+        self.R   = R.astype(int)
 
         #### Print summary
         print("Hamiltonian from file "+HR_file+" successfully loaded.")
@@ -151,13 +151,15 @@ class hamiltonian:
         return del_hk_out
 
 
-    def hr_spinless(self):
+    def set_hr_spinless(self):
         '''Averages spin-blocks to obtain a spin-less Hamiltonian without SOC interaction.'''
         self.hr_spinless = (self.hr[:,:self.n_orb,:self.n_orb]+self.hr[:,self.n_orb:,self.n_orb:])/2.0
 
     def hk_spinless(self,k_red):
         '''Performs Fouriert-transform at given point in reduced coordinates.'''
         #hk_out = np.sum(self.hr_spinless[:,:,:] * (np.exp(1j*2*np.pi*np.sum(self.R[:,:3]*k_red[:],axis=1))/self.R[:,3])[:,None,None], axis=0)
+        if type(self.hr_spinless) != np.ndarray:
+           self.set_hr_spinless()
         if k_red.ndim == 1:
             hk_out = np.einsum("ikl,i",self.hr_spinless, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3])
         elif k_red.ndim == 2:
@@ -211,6 +213,12 @@ class hamiltonian:
             print("")
         return H_R
 
+    def mod_H_R(self,R,mat):
+        '''Modifies the H(R) for given R by adding the matrix.
+        '''
+        R_index = np.argwhere(np.all((self.R[:,:3]-R)==0, axis=1))
+        self.hr[R_index[0,0]] += mat
+
 
 
 if __name__== "__main__":
@@ -222,12 +230,20 @@ if __name__== "__main__":
     print('Testing function "get_H_R".')
     R = np.array([0,0,0])
     my_ham.get_H_R(R)
+
+
+    print('''Testing function "mod_H_R"''')
+    mat = np.eye(my_ham.n_bands)
+    my_ham.mod_H_R(R,mat)
+    print("New hamiltonian at R=",R)
+    my_ham.get_H_R(R)
+
     print("Testing Fourier transform at the Gamma-point")
     gamma = np.array([0,0,0])
     hk = my_ham.hk(gamma)
     print("Shape H_k",np.shape(hk))
     print('Testing function "hr_spinless"...')
-    my_ham.hr_spinless()
+    my_ham.set_hr_spinless()
     print('Testing function "w2dynamics_hk"...')
     grid = np.array([[2,3,4]])
     w2name = "Hk_w2"

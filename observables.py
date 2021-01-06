@@ -5,6 +5,7 @@ from operators   import operator
 from hamiltonian import hamiltonian
 from k_space     import k_space
 import time
+import matplotlib.pyplot as plt
 
 #Parallelization
 #from joblib import Parallel, delayed
@@ -153,7 +154,7 @@ class observables:
             
 
         if self.ham.ef != None:
-            print("Shifting eigenvalues by Fermi level...")
+            print("Shifting eigenvalues w.r.t. Fermi level...")
             self.evals -= self.ham.ef
 
         # Run post-processing
@@ -370,6 +371,17 @@ class z2_wcc:
             z2 = m_tot % 2
             print("Z_2="+str(z2)) 
 
+    def plot_wcc(self):
+        '''Plots the wccs and the largest gap.'''
+        fig_wcc = plt.figure(num=None, figsize=(20, 5))
+        plt.subplot(121)
+        plt.plot(self.wcc[0],'bs')
+        plt.plot(self.gap[0],'r-')
+        plt.subplot(122)
+        plt.plot(self.wcc[1],'bs')
+        plt.plot(self.gap[1],'r-')
+        plt.show
+
 
 if __name__== "__main__":
     print("Testing class observables...")
@@ -385,7 +397,7 @@ if __name__== "__main__":
     path = k_space("path","red",vecs,my_ham.bra_vec,points)
     print("Testing operator 'E_triang' and k-integration...")
     nbins = 100
-    sigma = 0.1
+    sigma = 0.6
     op_types_k = ["E_triang"]
     op_types   = ["L"] 
     o_triang = observables(my_ham,path,op_types,OP_TYPES_K=op_types_k,PREFIX=prefix) 

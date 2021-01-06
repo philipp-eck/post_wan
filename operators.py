@@ -355,7 +355,7 @@ class operator:
            orb_soc_inv expectation value is calculated with a more efficient function.
            When called, initialized the creation of a spin-less Hamiltonian'''
         orb_soc_inv_op = np.zeros((3,self.ham.n_bands))
-        self.ham.hr_spinless()
+        self.ham.set_hr_spinless()
         return orb_soc_inv_op
 
     def Orb_SOC_inv_expval(self,k=None,evals=None,evecs=None):
