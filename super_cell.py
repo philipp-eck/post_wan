@@ -37,6 +37,7 @@ class super_cell:
         self.n_bands  = self.sup_dim*self.bulk_ham.n_bands
         self.n_elec   = self.sup_dim*self.bulk_ham.n_elec
         self.basis    = np.kron(np.ones(self.sup_dim),self.bulk_ham.basis).astype(int)
+        self.hr_spinless = None
         self.set_super_cell()
         if type(self.bulk_ham.bra_vec) != np.ndarray:
             print("Define Bravais vectors of the bulk model!!!")
@@ -120,6 +121,11 @@ class super_cell:
 #       print("Hamiltonian is hermitian?:",np.allclose(hk,np.conjugate(hk.transpose(0,2,1))))
         return hk
 
+    def hk_spinless(self,k_red):
+        '''Performs Fouriert-transform at given point in reduced coordinates.'''
+        hk = hamiltonian.hk_spinless(self,k_red)
+        return hk
+
 
     def del_hk(self,k_red):
         '''Returns nabla_k H_k in cartesian coordinates.'''
@@ -155,6 +161,9 @@ if __name__ == "__main__":
     print("Testing H(R) FT...")
     k = np.array([[0,0,0],[0.0,0.7,0]])
     Ham_super_cell.hk(k)
+
+    print("Testing H(R) spinless FT...")
+    Ham_super_cell.hk_spinless(k)
 
     print("Initializing slab...")
     Ham_slab = super_cell(Ham_bulk,sup_vec,1)
