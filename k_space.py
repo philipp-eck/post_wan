@@ -105,16 +105,17 @@ class k_space:
 
     def Plane(self,vecs):
         '''Creates a plane CONTAINING THE MARGINS OF THE PLANE.
-           DON'T USE FOR BZ SAMPLINT!!!
+           DON'T USE FOR BZ SAMPLING!!!
+           First vector: Center
+           Second and third vector: Vectors spanning the plane
            The first two vectors define a path, which is shifted by the third one, to generate the grid.'''
         if np.shape(self.vecs)!=(3,3):
             print("Input vectors have the wrong shape!!!")
         plane = np.zeros((self.n_points**2,3))
         for i in range(self.n_points):
-            vec_0 = vecs[0] + vecs[2]/(self.n_points-1)*i
-            vec_1 = vecs[1] + vecs[2]/(self.n_points-1)*i
+            vec_0 = vecs[0] + vecs[1]*(i/(self.n_points-1)-0.5)
             for j in range(3):
-                plane[i*self.n_points:(i+1)*self.n_points,j] = np.linspace(vec_0[j],vec_1[j],self.n_points)
+                plane[i*self.n_points:(i+1)*self.n_points,j] = np.linspace(vec_0[j]-0.5*vecs[2,j],vec_0[j]+0.5*vecs[2,j],self.n_points)
         return plane
 
 
@@ -180,7 +181,7 @@ if __name__== "__main__":
     print("Testing class k_space...")
 
     print("Checking the transform from reduced coodinates to cartesian coordinates...")
-    points = 11
+    points = 5
     real_vec = np.array([[3.0730000,    0.0000000,    0.0000000],[-1.5365000,    2.6612960,    0.0000000],[0.0000000,    0.0000000,   20.0000000]])
     vecs=np.array([[2/3,-1/3,0],[-2/3,1/3,0]]) # vecs has to be a 2-dim matrix
     print("Initial reduced vector:")
@@ -208,7 +209,7 @@ if __name__== "__main__":
 
 
     print("Checking function create_kPlane on "+str(points)+"x"+str(points)+" grid:")
-    vecs = np.array([[-1,0,0],[1,0,0],[0,1,0]])
+    vecs = np.array([[0,0,0],[1,0,0],[0,1,0]])
     print(np.shape(vecs))
 
 
