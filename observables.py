@@ -317,7 +317,7 @@ class z2_wcc:
                 print("Calculating Z_2 invariant for Gamma-plane...")
             else:
                 print("Calculating Z_2 invariant for BZ-surface plane...")
-            k_normal = k3/0.5
+            k_normal = k3*0.5
             m_tot = 0 
             for k1 in range(self.n_pump[0]):
                 k = np.zeros((self.n_pump[1],3))
@@ -339,7 +339,7 @@ class z2_wcc:
                 y=np.linalg.eigvals(U)
                 #Localization of the Wannier centers: log of the complex valued U eigenvalues
                 y = np.log(y)
-                self.wcc[k3,k1]=np.imag(y)%(2*np.pi)/(2*np.pi)
+                self.wcc[k3,k1]=np.sort(np.imag(y)%(2*np.pi)/(2*np.pi))
             #sort for calculating largest gap
             #likely not needed
             #self.wcc[k3] = np.sort(self.wcc[k3],axis=1)
