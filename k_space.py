@@ -65,7 +65,7 @@ class k_space:
             self.k_kind = "mesh"
 
         if self.k_type == "sphere":
-            self.k_space_red, self.k_space_car = self.Sphere(self.vecs_red)
+            self.k_space_red, self.k_space_car = self.Sphere(self.vecs_car)
             self.k_space_red = self.car_to_red(self.k_space_red)
             self.k_kind = "mesh"
 
@@ -198,10 +198,10 @@ class k_space:
         pp    = vec[0] -np.array([0,0,1])*self.radius
         path.extend([pp])
         for ri in range(1,self.n_points):
-            R = ri/self.n_points
+            R = ri/(self.n_points-1)
             #theta = ster_proj_back(R**2/((1+R**2)**2))
             #theta = ster_proj_back(R)
-            theta = np.pi*(1-1/self.n_points*(ri+1))
+            theta = np.pi*(1-1/(self.n_points-1)*ri)
             for phii in range(ri*8):
                 phi = 2*np.pi/(ri*8)*phii
                 point = np.array([np.cos(phi),np.sin(phi),0])*R
