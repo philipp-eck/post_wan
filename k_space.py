@@ -61,12 +61,12 @@ class k_space:
 
         if self.k_type == "sphere_ster_proj_plot":
             self.k_space_red, self.k_space_car = self.sphere_ster_proj_plot(self.vecs_car)
-            self.k_space_red = self.car_to_red(self.k_space_car)
+            self.k_space_red = self.car_to_red(self.k_space_red)
             self.k_kind = "mesh"
 
         if self.k_type == "sphere":
             self.k_space_red, self.k_space_car = self.Sphere(self.vecs_red)
-            self.k_space_red = self.car_to_red(self.k_space_car)
+            self.k_space_red = self.car_to_red(self.k_space_red)
             self.k_kind = "mesh"
 
         if self.k_type == "monkhorst":
