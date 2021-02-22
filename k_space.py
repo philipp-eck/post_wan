@@ -197,7 +197,7 @@ class k_space:
         ste.extend([point])
         pp    = vec[0] -np.array([0,0,1])*self.radius
         path.extend([pp])
-        for ri in range(1,self.n_points+1):
+        for ri in range(1,self.n_points):
             R = ri/self.n_points
             #theta = ster_proj_back(R**2/((1+R**2)**2))
             #theta = ster_proj_back(R)
