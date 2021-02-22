@@ -59,6 +59,11 @@ class k_space:
             self.k_space_red = self.car_to_red(self.k_space_car)
             self.k_kind = "mesh"
 
+        if self.k_type == "sphere":
+            self.k_space_red = self.Sphere(self.vecs_red)
+            self.k_space_car = self.Sphere(self.vecs_car)
+            self.k_kind = "mesh"
+
         if self.k_type == "monkhorst":
             self.k_space_red = self.Monkhorst(self.vecs)
             if self.bra_vec is np.array:
@@ -176,6 +181,32 @@ class k_space:
         return mesh,ste
 
 
+    def Sphere(self,vec):
+        ''' Creates path on the surface of the sphere
+            and the vector normal to the surface of the sphere'''
+        path = []
+    #   norm = []
+        for thetai in range(self.n_points):
+            theta = 1.0 * np.pi/(self.n_points-1)*thetai
+            stepsphi = 2*round(self.n_points*np.sin(theta)**2)+1
+            stepsphi = int(stepsphi)
+            for phii in range(stepsphi):
+                point = np.zeros(3)
+                phi = 2.0 * np.pi/stepsphi*phii
+                point[0] = vec[0,0]+self.radius*np.cos(phi)*np.sin(theta)
+                point[1] = vec[0,1]+self.radius*np.sin(phi)*np.sin(theta)
+                point[2] = vec[0,2]+self.radius*np.cos(theta)
+                path.extend([point])
+    #           normpoint = np.zeros(3)
+    #           normpoint[0] = np.cos(phi)*np.sin(theta)
+    #           normpoint[1] = np.sin(phi)*np.sin(theta)
+    #           normpoint[2] = np.cos(theta)
+    #           norm.extend([normpoint])
+        path = np.array(path)
+    #   norm = np.array(norm)
+        return path
+
+
 
 if __name__== "__main__":
     print("Testing class k_space...")
@@ -225,6 +256,8 @@ if __name__== "__main__":
     center = np.array([[ 0.50930216,   +0.03717546,   -0.31628638],[0,0,1],[1,0,0]])
     spheresterproj = k_space("sphere_ster_proj","car",center,real_vec,points,radius)
     print(spheresterproj.__dict__.keys())
+    print('Testing function "Sphere" ...')
+    sphere = k_space("sphere","car",center,real_vec,points,radius)
     print('Testing function "Monkhorst" ...')
     vecs = np.array([[2,3,4]])
     monkhorst = k_space("monkhorst","red",vecs,real_vec,points)

@@ -21,7 +21,8 @@ Ham = hamiltonian(inputfile,bra_vec,spin,basis,ef)
 
 #### Setting up k-space
 
-ktype     = "sphere_ster_proj"
+ktype     = "sphere"
+#ktype     = "sphere_ster_proj"
 kbasis    = "car"
 vecs      = np.array([[ 0.50930216,   -0.03717546,   -0.31628638]]) # In this calculation: center of the sphere
 radius    = 0.030
@@ -46,5 +47,5 @@ Observables = observables(Ham,K_space,op_types,op_types_k)
 Observables.calculate_ops()
 
 # Calculating Pontryagin-index for all observables
-Observables.sphere_winding()
+#Observables.sphere_winding()
 
