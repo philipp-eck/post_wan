@@ -59,9 +59,14 @@ class k_space:
             self.k_space_red = self.car_to_red(self.k_space_car)
             self.k_kind = "mesh"
 
+        if self.k_type == "sphere_ster_proj_plot":
+            self.k_space_red, self.k_space_car = self.sphere_ster_proj_plot(self.vecs_car)
+            self.k_space_red = self.car_to_red(self.k_space_car)
+            self.k_kind = "mesh"
+
         if self.k_type == "sphere":
-            self.k_space_red = self.Sphere(self.vecs_red)
-            self.k_space_car = self.Sphere(self.vecs_car)
+            self.k_space_red, self.k_space_car = self.Sphere(self.vecs_red)
+            self.k_space_red = self.car_to_red(self.k_space_car)
             self.k_kind = "mesh"
 
         if self.k_type == "monkhorst":
@@ -181,11 +186,40 @@ class k_space:
         return mesh,ste
 
 
+    def sphere_ster_proj_plot(self,vec):
+        ''' For plotting of the ster-proj. This function defines a grid, with constant point density
+            in the stereographic projection plane.
+            The number per circle scales with 8.
+        '''
+        path = []
+        ste = []
+        point = np.array([0,0,0])
+        ste.extend([point])
+        pp    = vec[0] -np.array([0,0,1])*self.radius
+        path.extend([pp])
+        for ri in range(1,self.n_points+1):
+            R = ri/self.n_points
+            #theta = ster_proj_back(R**2/((1+R**2)**2))
+            #theta = ster_proj_back(R)
+            theta = np.pi*(1-1/self.n_points*(ri+1))
+            for phii in range(ri*8):
+                phi = 2*np.pi/(ri*8)*phii
+                point = np.array([np.cos(phi),np.sin(phi),0])*R
+                ste.extend([point])
+                pp = np.zeros(3)
+                pp[0] = vec[0,0]+self.radius*np.cos(phi)*np.sin(theta)
+                pp[1] = vec[0,1]+self.radius*np.sin(phi)*np.sin(theta)
+                pp[2] = vec[0,2]+self.radius*np.cos(theta)
+                path.extend([pp])
+        path = np.array(path)
+        ste  = np.array(ste)
+        return path,ste
+
     def Sphere(self,vec):
         ''' Creates path on the surface of the sphere
             and the vector normal to the surface of the sphere'''
         path = []
-    #   norm = []
+        norm = []
         for thetai in range(self.n_points):
             theta = 1.0 * np.pi/(self.n_points-1)*thetai
             stepsphi = 2*round(self.n_points*np.sin(theta)**2)+1
@@ -197,14 +231,14 @@ class k_space:
                 point[1] = vec[0,1]+self.radius*np.sin(phi)*np.sin(theta)
                 point[2] = vec[0,2]+self.radius*np.cos(theta)
                 path.extend([point])
-    #           normpoint = np.zeros(3)
-    #           normpoint[0] = np.cos(phi)*np.sin(theta)
-    #           normpoint[1] = np.sin(phi)*np.sin(theta)
-    #           normpoint[2] = np.cos(theta)
-    #           norm.extend([normpoint])
+                normpoint = np.zeros(3)
+                normpoint[0] = np.cos(phi)*np.sin(theta)
+                normpoint[1] = np.sin(phi)*np.sin(theta)
+                normpoint[2] = np.cos(theta)
+                norm.extend([normpoint])
         path = np.array(path)
-    #   norm = np.array(norm)
-        return path
+        norm = np.array(norm)
+        return path,norm
 
 
 
@@ -256,6 +290,8 @@ if __name__== "__main__":
     center = np.array([[ 0.50930216,   +0.03717546,   -0.31628638],[0,0,1],[1,0,0]])
     spheresterproj = k_space("sphere_ster_proj","car",center,real_vec,points,radius)
     print(spheresterproj.__dict__.keys())
+    print('Testing function "sphere_ster_proj_plot" ...')
+    spheresterprojplot = k_space("sphere_ster_proj_plot","car",center,real_vec,points,radius) 
     print('Testing function "Sphere" ...')
     sphere = k_space("sphere","car",center,real_vec,points,radius)
     print('Testing function "Monkhorst" ...')
