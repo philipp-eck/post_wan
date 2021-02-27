@@ -321,7 +321,7 @@ class z2_wcc:
             m_tot = 0 
             for k1 in range(self.n_pump[0]):
                 k = np.zeros((self.n_pump[1],3))
-                k[:,p] = 0.5/self.n_pump[0]*k1
+                k[:,p] = 0.5/(self.n_pump[0]-1)*k1
                 k[:,f] = np.linspace(0,1,self.n_pump[1],endpoint=False)
                 k[:,n] = k_normal
                 hk = np.zeros((self.n_pump[1],self.ham.n_bands,self.ham.n_bands),dtype=complex)
@@ -342,7 +342,7 @@ class z2_wcc:
                 self.wcc[k3,k1]=np.sort(np.imag(y)%(2*np.pi)/(2*np.pi))
             #sort for calculating largest gap
             #likely not needed
-            #self.wcc[k3] = np.sort(self.wcc[k3],axis=1)
+            self.wcc[k3] = np.sort(self.wcc[k3],axis=1)
             gap = (np.roll(self.wcc[k3],-1,axis=1)+1-self.wcc[k3])%1
             gap_i = np.argmax(gap,axis=1)
             for k1 in range(self.n_pump[0]):
@@ -382,6 +382,24 @@ class z2_wcc:
         plt.plot(self.wcc[1],'bs')
         plt.plot(self.gap[1],'r-')
         plt.show
+
+    def write_wcc(self):
+        '''Writes the wannier charge centers and the largest gap to an output file'''
+        print("Writing WCC output...")
+        fss = "{k:7.3f}{g:7.3f}"
+        for n in range(self.ham.n_elec):
+            fss +="{wcc["+str(n)+"]:7.3f}"
+        fss += " \n"
+        print(fss)
+        for k3 in range(2):
+            if k3 == 0:
+                output = open("WCC_gam.dat","w")
+            else:
+                output = open("WCC_sur.dat","w")
+            for k in range(self.n_pump[0]):
+                output.write(fss.format(k=0.5*k/(self.n_pump[0]-1),g=self.gap[k3,k],wcc=self.wcc[k3,k]))
+            output.close()
+        print("Finished writing WCC output.")
 
 
 if __name__== "__main__":
