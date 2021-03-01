@@ -386,11 +386,10 @@ class z2_wcc:
     def write_wcc(self):
         '''Writes the wannier charge centers and the largest gap to an output file'''
         print("Writing WCC output...")
-        fss = "{k:7.3f}{g:7.3f}"
+        fss = "{k:8.4f}{g:8.4f}"
         for n in range(self.ham.n_elec):
-            fss +="{wcc["+str(n)+"]:7.3f}"
+            fss +="{wcc["+str(n)+"]:8.4f}"
         fss += " \n"
-        print(fss)
         for k3 in range(2):
             if k3 == 0:
                 output = open("WCC_gam.dat","w")
