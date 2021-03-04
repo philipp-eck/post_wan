@@ -88,8 +88,8 @@ class operator:
         self.op = self.BC_op
         self.expval = self.BC_expval
         self.expval_all_k = self.BC_expval 
-        self.post = self.b_int_ef
-
+       #self.post = self.b_int_ef
+        self.post = self.b_int_n_elec
     def set_BC_mag_op(self):
         '''Sets BC_mag-operator, requires nabla_k H(k).'''
         self.prec    = "12.3e"
@@ -528,6 +528,16 @@ class operator:
             occ = np.zeros_like(evals)
             #occ[evals <= self.ham.ef] = 1
             occ[evals <= 0] = 1
+            val_int = np.multiply(self.val,occ[:,None])
+            self.val_b_int = np.sum(val_int, axis = 2)
+
+    def b_int_n_elec(self,evals):
+        '''Performs band integration above the lowest n-elec bands'''
+        if self.ham.n_elec == None:
+            print("Number of electrons is not defined for the Hamiltonian, k-integration over the lowest n-elec bands is not possible...")
+        else:
+            occ = np.zeros_like(evals)
+            occ[:,:self.ham.n_elec] = 1
             val_int = np.multiply(self.val,occ[:,None])
             self.val_b_int = np.sum(val_int, axis = 2)
 
