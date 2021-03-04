@@ -5,7 +5,7 @@ from operators   import operator
 from hamiltonian import hamiltonian
 from k_space     import k_space
 import time
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 #Parallelization
 #from joblib import Parallel, delayed

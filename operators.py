@@ -269,7 +269,7 @@ class operator:
     
             #### Compute BC, use np.roll to generate the permutation
            #BC_old = 2*np.imag(np.einsum('...ii->...i',np.einsum('...ji,...jk->...ik',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m,-2,axis=0))))
-            BC =-2*np.imag(np.einsum('dji,dji->dj',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m,-2,axis=0),optimize=True))
+            BC =-2*np.imag(np.einsum('dji,dji->di',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m,-2,axis=0),optimize=True))
             #### Calculate orbital moment of the Bloch state
             #         <n|nabla_k H_k|m>x<m|nabla_k H_k|n> 
             # m = -Im -----------------------------------
@@ -299,7 +299,7 @@ class operator:
             # Note: the expectation value <m|nabla_k H_k|n>/(E_m - E_n) are written as line vectors in n_del_m
             # use np.roll to generate the permutation
            #path_BC = np.einsum_path('kdji,kdji->kdi',np.array([np.roll(np.conj(n_del_m),-1,axis=1)[0]]),np.array([np.roll(n_del_m,-2,axis=1)[0]]),optimize='optimal')
-            BC =-2*np.imag(np.einsum('kdji,kdji->kdj',np.roll(np.conj(n_del_m),-1,axis=1),np.roll(n_del_m,-2,axis=1),optimize=True))
+            BC =-2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(n_del_m),-1,axis=1),np.roll(n_del_m,-2,axis=1),optimize=True))
 
         return BC
     def BC_mag_expval(self,k=None,evals=None,evecs=None):
@@ -325,7 +325,7 @@ class operator:
             #         <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
             # m = -Im -----------------------------------
             #                     E_m - E_n
-            orb_mom =+2*np.imag(np.einsum('dji,dji->dj',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m*Em_En,-2,axis=0),optimize=True))
+            orb_mom =+2*np.imag(np.einsum('dji,dji->di',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m*Em_En,-2,axis=0),optimize=True))
         if k.ndim == 2:
             #Nominator <n|nabla_k H_k|m>
             #To get the BC-operator
@@ -347,7 +347,7 @@ class operator:
             #                     E_m - E_n
             # Note: global minus sign arising from magnetic moment of the electron
             # BC = 2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(n_del_m),-1,axis=1),np.roll(n_del_m,-2,axis=1),optimize=True))
-            orb_mom =+2*np.imag(np.einsum('kdji,kdji->kdj',np.roll(np.conj(n_del_m),-1,axis=1),np.roll(n_del_m*Em_En[:,None],-2,axis=1),optimize=True))
+            orb_mom =+2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(n_del_m),-1,axis=1),np.roll(n_del_m*Em_En[:,None],-2,axis=1),optimize=True))
         return orb_mom
  
     def Orb_SOC_inv_op(self,k=None,evals=None,evecs=None):
