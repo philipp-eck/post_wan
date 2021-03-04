@@ -35,6 +35,12 @@ vecs      = np.array([
                       [-1/3,-1/3,0],
                       [-2/3,-2/3,0]
                       ]) 
+vecs      = np.array([
+                      [ 2/3,-1/3,0],
+                      [ 1/2,   0,0],
+                      [   0,   0,0],
+                      [-2/3, 1/3,0]
+                      ])
 npoints   = 100
 
 K_space = k_space(ktype,kbasis,vecs,bra_vec,npoints)

@@ -96,6 +96,7 @@ class hamiltonian:
 
         #### Build H(R)
         hr = np.array(hr_full[:,:,:,5] + 1j * hr_full[:,:,:,6])
+        # is this transpose correct? Yes, since it reproduces the DFT spin-texture correctly!!! This might not be considererd in wannier tools!!! 
         self.hr = np.transpose(hr,axes=(0,2,1))
 
         #### Create R-vector array, last entry contains the weights
