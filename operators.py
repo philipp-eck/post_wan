@@ -42,6 +42,8 @@ class operator:
             self.set_J_op()
         elif self.op_type == "BC":
             self.set_BC_op()
+        elif self.op_type == "BC_spin":
+            self.set_BC_spin_op()
         elif self.op_type == "BC_mag":
             self.set_BC_mag_op()
         elif self.op_type == "Orb_SOC_inv":
@@ -90,6 +92,16 @@ class operator:
         self.expval_all_k = self.BC_expval 
        #self.post = self.b_int_ef
         self.post = self.b_int_n_elec
+
+    def set_BC_spin_op(self):
+        '''Sets spin-BC-operator, requires nabla_k H(k).'''
+        self.prec    = "12.3e"
+        self.op = self.BC_spin_op
+        self.expval = self.BC_spin_expval
+        self.expval_all_k = self.BC_spin_expval
+       #self.post = self.b_int_ef
+        self.post = self.b_int_n_elec
+
     def set_BC_mag_op(self):
         '''Sets BC_mag-operator, requires nabla_k H(k).'''
         self.prec    = "12.3e"
@@ -234,11 +246,19 @@ class operator:
         '''Generates an empty array.
            BC expectation value is calculated with a more efficient function.
            Components 1-3: Berry curvature
-           !!!Currently not used!!!: Components 4-6: Orbital moment of Bloch state
         '''
         BC_op = np.zeros((3,self.ham.n_bands))
         return BC_op
 
+    def BC_spin_op(self,k=None,evals=None,evecs=None):
+        '''Generates an empty array.
+           Spin-BC expectation value is calculated with a more efficient function.
+           Components  1- 4: Bx*s
+           Components  5- 8: By*s
+           Components  9-12: Bz*s
+        '''
+        BC_spin_op = np.zeros((12,self.ham.n_bands))
+        return BC_spin_op
 
     def BC_mag_op(self,k=None,evals=None,evecs=None):
         '''Generates an empty array.
@@ -247,107 +267,90 @@ class operator:
         BC_mag_op = np.zeros((3,self.ham.n_bands))
         return BC_mag_op
 
+
+##### Modern theory of polarization properties/functions #####
+
+    def calc_Em_En(self,k,evals):
+        '''Computes the denominator matrix (E_m-E_n) and sets diagonal to 1.
+        '''
+        Em_En  = np.reshape(np.kron(np.ones(self.ham.n_bands),evals),(np.shape(k)[0],self.ham.n_bands,self.ham.n_bands))
+        Em_En -= np.transpose(Em_En,(0,2,1))
+        #[np.fill_diagonal(Em_En[i],np.Inf) for i in range(k.shape[0])]
+        [np.fill_diagonal(Em_En[i],0.0001) for i in range(k.shape[0])]
+        return Em_En
+
+    def calc_vel(self,k,evecs,spin=False):
+        '''Calculates the velocity operator matrixm <m|nabla_k H_k|n>.
+           If spin=True, calculates the anti-commutator v=1/2{sigma,v}.
+           See also: https://arxiv.org/pdf/1901.05651.pdf
+        '''
+        if spin == False:
+            m_del_n = np.einsum('kdb,kcde,kef->kcbf',evecs.conj(),self.ham.del_hk(k),evecs,optimize=True)
+            diag = np.eye(self.ham.n_bands)[None,None]
+        else:
+            S = self.S_op()
+            S = np.roll(S,1,axis=0)
+            S[0] = 0.5*np.eye(S[0].shape[0]) # S[0]=1/2 identity matrix
+            #### Calculate the anti-commutator
+            del_hk = self.ham.del_hk(k)
+            v = np.einsum('slm,kcmn->kcsln',S,del_hk) + np.einsum('kclm,smn->kcsln',del_hk,S)
+            m_del_n = np.einsum('kdb,kcsde,kef->kcsbf',evecs.conj(),v,evecs,optimize=True)
+            diag = np.eye(self.ham.n_bands)[None,None,None]
+
+        #### Cheaty way to set diag of m_del_n to 0
+        #don't use this!!!
+#       non_diag = np.ones_like(m_del_n)-diag
+#       m_del_n *=non_diag
+        return m_del_n
+
+           
+
     def BC_expval(self,k=None,evals=None,evecs=None):
+        ''' Calculates Berry curvature:
+                <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
+        m = -Im -----------------------------------
+                            (E_m - E_n)^2
+        Note: the expectation value <m|nabla_k H_k|n>/(E_m - E_n) are written as line vectors in m_del_n.
+        use np.roll to generate the permutation.
+        '''
 
-        if k.ndim == 1:
-            #Nominator <n|nabla_k H_k|m>
-            #To get the BC-operator
-           #n_del_m_old = np.einsum("...ji,...jk",evecs.conj()[None],np.einsum("...ij,...jk",self.ham.del_hk(k),evecs[None]))
-            n_del_m = np.einsum('db,cde,ef->cbf',evecs.conj(),self.ham.del_hk(k),evecs,optimize=True)
-
-            #### Cheaty way to set diag of n_del_m to 0
-            non_diag = np.ones_like(n_del_m)-np.diag(np.ones(self.ham.n_bands))[None]
-            n_del_m *=non_diag
-     
-     
-            #### Compute the denominator (E_m-E_n) and set diagonal to 1
-            Em_En  = np.reshape(np.kron(np.ones(self.ham.n_bands),evals),(self.ham.n_bands,self.ham.n_bands))
-            Em_En -= np.transpose(Em_En)
-            np.fill_diagonal(Em_En,1) 
-
-            n_del_m /= Em_En
-    
-            #### Compute BC, use np.roll to generate the permutation
-           #BC_old = 2*np.imag(np.einsum('...ii->...i',np.einsum('...ji,...jk->...ik',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m,-2,axis=0))))
-            BC =-2*np.imag(np.einsum('dji,dji->di',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m,-2,axis=0),optimize=True))
-            #### Calculate orbital moment of the Bloch state
-            #         <n|nabla_k H_k|m>x<m|nabla_k H_k|n> 
-            # m = -Im -----------------------------------
-            #                     E_m - E_n
-           #orb_mom = 2*np.imag(np.einsum('dji,dji->di',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m*Em_En,-2,axis=0),optimize=True))
-           #out = np.concatenate((BC,orb_mom))
-        if k.ndim == 2:
-            #Nominator <n|nabla_k H_k|m>
-            #To get the BC-operator
-           #path_ndelm = np.einsum_path('kdb,kcde,kef->kcbf',np.array([evecs[0].conj()]),np.array([self.ham.del_hk(k)[0]]),np.array([evecs[0]]),optimize='optimal')[0]
-            n_del_m = np.einsum('kdb,kcde,kef->kcbf',evecs.conj(),self.ham.del_hk(k),evecs,optimize=True)
-            #### Cheaty way to set diag of n_del_m to 0
-            non_diag = np.ones_like(n_del_m)-np.diag(np.ones(self.ham.n_bands))[None,None]
-            n_del_m *=non_diag
-
-
-            #### Compute the denominator (E_m-E_n) and set diagonal to 1
-            Em_En  = np.reshape(np.kron(np.ones(self.ham.n_bands),evals),(np.shape(k)[0],self.ham.n_bands,self.ham.n_bands))
-            Em_En -= np.transpose(Em_En,(0,2,1))
-            [np.fill_diagonal(Em_En[i],1) for i in range(k.shape[0])]
-
-            n_del_m /= Em_En[:,None]
-            #### Calculate Berry curvature                  
-            #         <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
-            # m = -Im -----------------------------------
-            #                    (E_m - E_n)^2
-            # Note: the expectation value <m|nabla_k H_k|n>/(E_m - E_n) are written as line vectors in n_del_m
-            # use np.roll to generate the permutation
-           #path_BC = np.einsum_path('kdji,kdji->kdi',np.array([np.roll(np.conj(n_del_m),-1,axis=1)[0]]),np.array([np.roll(n_del_m,-2,axis=1)[0]]),optimize='optimal')
-            BC =-2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(n_del_m),-1,axis=1),np.roll(n_del_m,-2,axis=1),optimize=True))
-
+        Em_En    = self.calc_Em_En(k,evals)
+        m_del_n  = self.calc_vel(k,evecs)
+        m_del_n /= Em_En[:,None]
+        BC =-2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n,-2,axis=1),optimize=True))
         return BC
+
+    def BC_spin_expval(self,k=None,evals=None,evecs=None):
+        ''' Calculates Berry curvature:
+                <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
+        m = -Im -----------------------------------
+                            (E_m - E_n)^2
+        Note: the expectation value <m|nabla_k H_k|n>/(E_m - E_n) are written as line vectors in m_del_n.
+        use np.roll to generate the permutation.
+        '''
+
+        Em_En    = self.calc_Em_En(k,evals)
+        m_del_n  = self.calc_vel(k,evecs,True)
+        m_del_n /= Em_En[:,None,None]
+        m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
+#       BC_spin =-2*np.imag(np.einsum('kcsji,kcji->kcsi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True))
+        BC_spin =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
+                           -np.einsum('kcmn,kcsmn->kcsn',np.roll(m_del_n[:,:,0],-1,axis=1),np.roll(np.conj(m_del_n),-2,axis=1),optimize=True))
+        BC_spin = BC_spin.reshape((k.shape[0],12,self.ham.n_bands))
+        return BC_spin
+
     def BC_mag_expval(self,k=None,evals=None,evecs=None):
+        ''' Calculates orbital moment of the Bloch state:
+                 <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
+        l_z= +Im -----------------------------------
+                             E_m - E_n
+         Note: global minus sign arising from magnetic moment of the electron.
+        '''
 
-        if k.ndim == 1:
-            #Nominator <n|nabla_k H_k|m>
-            #To get the BC-operator
-            n_del_m = np.einsum('db,cde,ef->cbf',evecs.conj(),self.ham.del_hk(k),evecs,optimize=True)
-
-            #### Cheaty way to set diag of n_del_m to 0
-            non_diag = np.ones_like(n_del_m)-np.diag(np.ones(self.ham.n_bands))[None]
-            n_del_m *=non_diag
-
-
-            #### Compute the denominator (E_m-E_n) and set diagonal to 1
-            Em_En  = np.reshape(np.kron(np.ones(self.ham.n_bands),evals),(self.ham.n_bands,self.ham.n_bands))
-            Em_En -= np.transpose(Em_En)
-            np.fill_diagonal(Em_En,1)
-
-            n_del_m /= Em_En
-
-            #### Calculate orbital moment of the Bloch state
-            #         <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
-            # m = -Im -----------------------------------
-            #                     E_m - E_n
-            orb_mom =+2*np.imag(np.einsum('dji,dji->di',np.roll(np.conj(n_del_m),-1,axis=0),np.roll(n_del_m*Em_En,-2,axis=0),optimize=True))
-        if k.ndim == 2:
-            #Nominator <n|nabla_k H_k|m>
-            #To get the BC-operator
-            n_del_m = np.einsum('kdb,kcde,kef->kcbf',evecs.conj(),self.ham.del_hk(k),evecs,optimize=True)
-            #### Cheaty way to set diag of n_del_m to 0
-            non_diag = np.ones_like(n_del_m)-np.diag(np.ones(self.ham.n_bands))[None,None]
-            n_del_m *=non_diag
-
-
-            #### Compute the denominator (E_m-E_n) and set diagonal to 1
-            Em_En  = np.reshape(np.kron(np.ones(self.ham.n_bands),evals),(np.shape(k)[0],self.ham.n_bands,self.ham.n_bands))
-            Em_En -= np.transpose(Em_En,(0,2,1))
-            [np.fill_diagonal(Em_En[i],1) for i in range(k.shape[0])]
-
-            n_del_m /= Em_En[:,None]
-            #### Calculate orbital moment of the Bloch state
-            #         <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
-            #l_z= +Im -----------------------------------
-            #                     E_m - E_n
-            # Note: global minus sign arising from magnetic moment of the electron
-            # BC = 2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(n_del_m),-1,axis=1),np.roll(n_del_m,-2,axis=1),optimize=True))
-            orb_mom =+2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(n_del_m),-1,axis=1),np.roll(n_del_m*Em_En[:,None],-2,axis=1),optimize=True))
+        Em_En    = self.calc_Em_En(k,evals)
+        m_del_n  = self.calc_vel(k,evecs)
+        m_del_n /= Em_En[:,None]
+        orb_mom =+2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n*Em_En[:,None],-2,axis=1),optimize=True))
         return orb_mom
  
     def Orb_SOC_inv_op(self,k=None,evals=None,evecs=None):

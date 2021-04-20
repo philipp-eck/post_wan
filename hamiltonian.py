@@ -124,16 +124,18 @@ class hamiltonian:
 
 
     def hk(self,k_red):
-        '''Performs Fouriert-transform at given point in reduced coordinates.'''
-       #hk_out = np.sum(self.hr[:,:,:] * (np.exp(1j*2*np.pi*np.sum(self.R[:,:3]*k_red[:],axis=1))/self.R[:,3])[:,None,None], axis=0)
-        if k_red.ndim == 1:
-            hk_out = np.einsum("ikl,i",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3])
-        elif k_red.ndim == 2:
-            hk_out = np.einsum("ikl,ai->akl",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=self.hk_path)
+        '''Performs Fouriert-transform at given point in reduced coordinates. Expects k_red.dim=2.
+           Remove out-commented part if testet sufficiently.
+        '''
+#       if k_red.ndim == 1:
+#           hk_out = np.einsum("ikl,i",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3])
+#       elif k_red.ndim == 2:
+#       hk_out = np.einsum("ikl,ai->akl",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=self.hk_path)
+        hk_out = np.einsum("ikl,ai->akl",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
         return hk_out
 
     def hk_parallel(self,k_red):
-        '''Performs FT k-parallelized.
+        '''Performs FT k-parallelized. Currently not used!!!
         '''
         hk_out = np.zeros((np.shape(k_red)[0],self.n_bands,self.n_bands),dtype="complex")
 
@@ -145,12 +147,13 @@ class hamiltonian:
 
 
     def del_hk(self,k_red):
-        '''Returns nabla_k H_k in cartesian coordinates.'''
-        #del_hk_out  = 1j* np.sum(self.R_cart[:,:,None,None]*self.hr[:,None,:,:] * (np.exp(1j*2*np.pi*np.sum(self.R[:,:3]*k_red,axis=1))/self.R[:,3])[:,None,None,None], axis=0)
-        if k_red.ndim == 1:
-            del_hk_out = 1j* np.einsum("ij,ikl,i->jkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3],optimize=False)
-        elif k_red.ndim == 2:
-            del_hk_out = 1j* np.einsum("ij,ikl,ai->ajkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)#self.del_hk_path)
+        '''Returns nabla_k H_k in cartesian coordinates. Expects k_red.dim=2.
+           Remove out-commented part if testet sufficiently.
+        '''
+#       if k_red.ndim == 1:
+#           del_hk_out = 1j* np.einsum("ij,ikl,i->jkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3],optimize=False)
+#       elif k_red.ndim == 2:
+        del_hk_out = 1j* np.einsum("ij,ikl,ai->ajkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)#self.del_hk_path)
         return del_hk_out
 
 
@@ -181,12 +184,14 @@ class hamiltonian:
                 output.write("\n")
         mh_grid = k_space("monkhorst","red",grid,)
 
+        # Run FT
+        hk = self.hk(mh_grid.k_space_red)
         output = open(filename+".dat","w")
         #write header
         output.write("{:9d}{:9d}{:9d}\n".format(np.shape(mh_grid.k_space_red)[0],self.n_bands,self.n_bands))
         for i_k in range(np.shape(mh_grid.k_space_red)[0]):
-            hk = self.hk(mh_grid.k_space_red[i_k])
-            write_Hk(mh_grid.k_space_red[i_k],hk)
+           #hk = self.hk(mh_grid.k_space_red[i_k])
+            write_Hk(mh_grid.k_space_red[i_k],hk[i_k])
 
         output.close()
 
@@ -242,7 +247,7 @@ if __name__== "__main__":
     my_ham.get_H_R(R)
 
     print("Testing Fourier transform at the Gamma-point")
-    gamma = np.array([0,0,0])
+    gamma = np.array([[0,0,0]])
     hk = my_ham.hk(gamma)
     print("Shape H_k",np.shape(hk))
     print('Testing function "hr_spinless"...')
@@ -257,7 +262,7 @@ if __name__== "__main__":
     basis = np.array([0,1])
     basis_ham = hamiltonian("test_ham/hr_In_soc.dat",real_vec,True,basis)
     print("Testing k-derivative of the Hamiltonian")
-    my_ham.del_hk(np.array([0.1,0.3,0.6]))
+    my_ham.del_hk(np.array([[0.1,0.3,0.6]]))
     print("Testing h_k for more dimensional k_array")
     k = np.array([[0,0,0],[1,0,0]])
     print(np.shape(my_ham.hk(k)))
@@ -266,7 +271,7 @@ if __name__== "__main__":
     k = np.random.rand(1000,3)
     h_single = np.zeros((1000,my_ham.n_bands,my_ham.n_bands),dtype="complex")
     for i in range(1000):
-        h_single[i] = my_ham.hk(k[i])
+        h_single[i] = my_ham.hk(np.array([k[i]]))
     print("Time for single hk:", time.time()-time0s)
     print("Testing all k-point FT")
     time0a = time.time()
@@ -276,7 +281,7 @@ if __name__== "__main__":
     if parallel == True:
         print("Testing k-parallelized FT:")
         time0p = time.time()
-        h_all = my_ham.hk_parallel(k)
+        h_all = my_ham.hk(k)
         print("Time for all-k hk:", time.time()-time0p)
 
     print("Testing single and all k-point del_h_k")
@@ -284,10 +289,10 @@ if __name__== "__main__":
     k = np.random.rand(1000,3)
     del_hk_single = np.zeros((1000,3,my_ham.n_bands,my_ham.n_bands),dtype="complex")
     for i in range(1000):
-        del_hk_single[i] = my_ham.del_hk(k[i])
+        del_hk_single[i] = my_ham.del_hk(np.array([k[i]]))
     print("Time for single hk:", time.time()-time0s)
     print("Testing all k-point FT")
     time0a = time.time()
     del_hk_all = my_ham.del_hk(k)
     print("Time for all-k hk:", time.time()-time0a)
-    print("Both methods return same H(k):",np.allclose(del_hk_single,del_hk_all))
+    print("Both methods return same del_H(k):",np.allclose(del_hk_single,del_hk_all))

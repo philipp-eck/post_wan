@@ -33,7 +33,9 @@ class k_space:
         self.n_points = N_POINTS      # Number of points used for the segments
         self.radius  = RADIUS
 
-        if np.shape(self.bra_vec)==(3,3):
+        if np.shape(self.bra_vec)!=(3,3):
+            print("bra_vec has not the shape=(3,3)!!!")
+        else:
             if self.k_basis == "red":
                 self.vecs_red = VECS
                 self.vecs_car = self.red_to_car(self.vecs)
@@ -70,8 +72,10 @@ class k_space:
             self.k_kind = "mesh"
 
         if self.k_type == "monkhorst":
+            print('Setting k_basis="red".')
+            self.k_basis = "red"
             self.k_space_red = self.Monkhorst(self.vecs)
-            if self.bra_vec is np.array:
+            if self.bra_vec is not None:
                self.k_space_car = self.red_to_car(self.k_space_red)
             self.k_kind = "mesh"
            #self.k_space_car = self.red_to_car(bra_vec,self.k_space_red)

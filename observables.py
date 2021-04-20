@@ -67,18 +67,18 @@ class observables:
         for op_type_k in self.op_types_k:
             self.ops[op_type_k].initialize_val_k(np.shape(self.k_space.k_space_red)[0])
 
-    def calculate_ops(self,write=True,all_k=True):
+    def calculate_ops(self,write=True,all_k=True,post=True):
         '''Calls H_R Fouriertransform, diagonalizes H_k, calculates Expectation values.'''
 
         self.initialize_op_val()
         print("Calculating operators on the given k-space...")
-        def expval(evecs,op):
+        def expval_old(evecs,op):
             '''Calculates <Psi|Op|Psi> along all dimensions of the operator.'''
            #val = np.einsum('...ii->...i',np.einsum('...ji,...jk->...ik',np.conj(evecs[None,:,:]),np.einsum('...ij,...jk->...ik',op,evecs[None,:,:]))).real
             val = np.einsum('df,cde,ef->cf',np.conj(evecs),op,evecs,optimize=True).real
-
             return val
-        def expval_all_k(evecs,op):
+
+        def expval(evecs,op):
             '''Calculates <Psi|Op|Psi> along all dimensions of the operator on all k-points.'''
            #val = np.einsum('...ii->...i',np.einsum('...ji,...jk->...ik',np.conj(evecs[:,None,:,:]),np.einsum('...ij,...jk->...ik',op,evecs[:,None,:,:]))).real
            #path = np.einsum_path('kdf,cde,kef->kcf',np.conj(np.array([evecs[0]])),op,np.array([evecs[0]]),optimize='optimal')[0]
@@ -88,23 +88,28 @@ class observables:
 
         self.evals = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands))
         self.evecs = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands,self.ham.n_bands),dtype=complex)
-        def calc_k(i_k):
-            hk = self.ham.hk(self.k_space.k_space_red[i_k])
-            self.evals[i_k],self.evecs[i_k] = np.linalg.eigh(hk,UPLO="U")
+        def calc_k(i_k,k_i):
+            '''Calls expval() for each operator on a single k-point.
+               Transforms k_i.dim=1 to k_i.dim=2 for using the all k-point routines.'''
+            hk = self.ham.hk(k_i)
+            evals,evecs = np.linalg.eigh(hk,UPLO="U")
+            self.evals[i_k], self.evecs[i_k] = evals, evecs
     
             for op_type in self.op_types:
-                self.ops[op_type].val[i_k] = expval(self.evecs[i_k],self.ops[op_type].op)
+                self.ops[op_type].val[i_k] = expval(evecs,self.ops[op_type].op)[0]
     
             for op_type_k in self.op_types_k:
-                    self.ops[op_type_k].val[i_k] = self.ops[op_type_k].expval(self.k_space.k_space_red[i_k],self.evals[i_k],self.evecs[i_k])
+                    self.ops[op_type_k].val[i_k] = self.ops[op_type_k].expval(k_i,evals,evecs)[0]
+
     
         def calc_serial():
             str_prog = "          "
             n_prog   = 1
             print("Progress: ["+str_prog+"]", end="\r", flush=True)
             nk = np.shape(self.k_space.k_space_red)[0]
-            for i_k in range(nk):
-                calc_k(i_k)
+            for i_k,k_i in enumerate(self.k_space.k_space_red):
+                k_i = np.array([k_i])
+                calc_k(i_k,k_i)
                 if i_k >= n_prog *nk/10.0:
                     str_prog = ""
                     for i_prog in range(10):
@@ -135,11 +140,11 @@ class observables:
 
             for op_type in self.op_types:
                 time_op0 = time.time()
-                self.ops[op_type].val = expval_all_k(self.evecs,self.ops[op_type].op)
+                self.ops[op_type].val = expval(self.evecs,self.ops[op_type].op)
                 print("Time for calculating expectation value of operator "+op_type+":",time.time()-time_op0)
             for op_type_k in self.op_types_k:
                  time_op0 = time.time()
-                 self.ops[op_type_k].val = self.ops[op_type_k].expval_all_k(self.k_space.k_space_red,self.evals,self.evecs)
+                 self.ops[op_type_k].val = self.ops[op_type_k].expval(self.k_space.k_space_red,self.evals,self.evecs)
                  print("Time for calculating expectation value of operator "+op_type_k+":",time.time()-time_op0)
 
         if all_k == True:
@@ -159,7 +164,8 @@ class observables:
             self.evals -= self.ham.ef
 
         # Run post-processing
-        self.post_ops()
+        if post == True:
+            self.post_ops()
         # Write observables
         if write == True:
             self.write_ops()
@@ -343,13 +349,13 @@ class z2_wcc:
             #sort for calculating largest gap
             #likely not needed
             self.wcc[k3] = np.sort(self.wcc[k3],axis=1)
-            gap = (np.roll(self.wcc[k3],-1,axis=1)+1-self.wcc[k3])%1
+            gap = (np.roll(self.wcc[k3],-1,axis=1)+0.999999-self.wcc[k3])%1
             gap_i = np.argmax(gap,axis=1)
             for k1 in range(self.n_pump[0]):
                 self.gap[k3,k1] = (self.wcc[k3,k1,gap_i[k1]]+gap[k1,gap_i[k1]]/2.0)%1
 
             # Computing the directed area of the triangle spanned by the wannier center x_i+1 and the lagest gaps z_i and z_i+1
-            for k1 in range(self.n_pump[0]):
+            for k1 in range(self.n_pump[0]-1):
                 del_m = 1
                 k = (k1+1)%self.n_pump[0]
                 g = np.sin(2*np.pi*(self.gap[k3,k,None]-self.gap[k3,k1,None])) + np.sin(2*np.pi*(self.wcc[k3,k]-self.gap[k3,k,None])) + np.sin(2*np.pi*(self.gap[k3,k1,None]-self.wcc[k3,k,None]))
