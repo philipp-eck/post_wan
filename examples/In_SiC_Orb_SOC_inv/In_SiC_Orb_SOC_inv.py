@@ -42,14 +42,17 @@ vecs      = np.array([
                       [-2/3, 1/3,0]
                       ])
 npoints   = 100
-
+vecs = np.array([[+5/3,-1/3,0],[+4/3,-2/3,0],[0,0,0]])
 K_space = k_space(ktype,kbasis,vecs,bra_vec,npoints)
-
+vecs = np.array([[0,0,0],[3,0,0],[0,3,0]])
+ktype="plane"
+kbasis="car"
+K_space = k_space(ktype,kbasis,vecs,bra_vec,npoints)
 
 #### Defining operators
 
 op_types  =["S","L","J"]
-op_types_k=["BC","BC_mag","Orb_SOC_inv"]
+op_types_k=["BC","BC_spin","BC_mag","Orb_SOC_inv"]
 
 
 #### Running calculation
@@ -58,6 +61,6 @@ op_types_k=["BC","BC_mag","Orb_SOC_inv"]
 Observables = observables(Ham,K_space,op_types,op_types_k)
 
 # Calculating observables
-Observables.calculate_ops() 
+Observables.calculate_ops(all_k=True) 
 
 

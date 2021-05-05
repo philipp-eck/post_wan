@@ -228,6 +228,25 @@ class hamiltonian:
         self.hr[R_index[0,0]] += mat
 
 
+    def calc_ef(self,vecs=np.array([[9,9,9]])):
+        '''Calculates and sets the Fermi level.
+        '''
+        if self.n_elec == None:
+            print('"n_elec" not set, Fermi level is not calculated!!!')
+        else:
+            mh_grid = k_space("monkhorst","red",vecs,self.bra_vec)
+            evals = np.linalg.eigvalsh(self.hk(mh_grid.k_space_red))
+            nk_occ = np.prod(vecs)
+
+            if self.spin == False:
+                n_occ = int(nk_occ*self.n_elec/2.0)
+            else:
+                n_occ = int(nk_occ*self.n_elec)
+
+            evals_sort = np.sort(evals.flatten())
+            self.ef = (evals_sort[n_occ-1]+evals_sort[n_occ])/2
+            print("The Fermi energy is:",self.ef)
+
 
 if __name__== "__main__":
     print("Testing class hamiltonian...")
@@ -296,3 +315,8 @@ if __name__== "__main__":
     del_hk_all = my_ham.del_hk(k)
     print("Time for all-k hk:", time.time()-time0a)
     print("Both methods return same del_H(k):",np.allclose(del_hk_single,del_hk_all))
+
+    print("Testing function 'set_ef':")
+    ham_sro = hamiltonian("test_ham/SRO_Ru_d_wo_soc.dat",real_vec,False,N_ELEC=4)
+    ham_sro.calc_ef()
+    print("DFT Fermi-Level: 6.18885310")
