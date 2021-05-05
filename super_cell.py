@@ -20,6 +20,7 @@ class super_cell:
         basis       # Array containing the l-quantum numbers of the subspaces
         ef          # Float containing the Fermi-energy
         n_elec      # Number of electrons in the system
+        sup_basis   # Basis position of the primitive unit cell in the super cell
     '''
 
     def __init__(self,BULK_HAM,SUP_VEC,PBC=None):
@@ -115,8 +116,7 @@ class super_cell:
                         elif np.abs((pos1+R-pos2)[self.pbc])<0.001:
                             add_hr(self,r,i,j)
 
-        self.basis = basis
-        self.basis_red = basis_red
+        self.sup_basis = basis
         #probably not needed anymore
 #       self.hk_path     = np.einsum_path("ikl,ai->akl",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],np.array([[0,0,0]])))/self.R[:,3], optimize='optimal')[0]
 
