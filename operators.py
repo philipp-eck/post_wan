@@ -42,8 +42,15 @@ class operator:
             self.set_J_op()
         elif self.op_type == "BC":
             self.set_BC_op()
-        elif self.op_type == "BC_spin":
+        elif self.op_type == "BC_S":
             self.set_BC_spin_op()
+            self.BC_type = "S"
+        elif self.op_type == "BC_L":
+            self.set_BC_oam_op()
+            self.BC_type = "L"
+        elif self.op_type == "BC_J":
+            self.set_BC_J_op()
+            self.BC_type = "J"
         elif self.op_type == "BC_mag":
             self.set_BC_mag_op()
         elif self.op_type == "Orb_SOC_inv":
@@ -96,9 +103,27 @@ class operator:
     def set_BC_spin_op(self):
         '''Sets spin-BC-operator, requires nabla_k H(k).'''
         self.prec    = "12.3e"
-        self.op = self.BC_spin_op
-        self.expval = self.BC_spin_expval
-        self.expval_all_k = self.BC_spin_expval
+        self.op = self.BC_op_op
+        self.expval = self.BC_op_expval
+        self.expval_all_k = self.BC_op_expval
+       #self.post = self.b_int_ef
+        self.post = self.b_int_n_elec
+
+    def set_BC_oam_op(self):
+        '''Sets OAM-BC-operator, requires nabla_k H(k) and a defined basis.'''
+        self.prec    = "12.3e"
+        self.op = self.BC_op_op
+        self.expval = self.BC_op_expval
+        self.expval_all_k = self.BC_op_expval
+       #self.post = self.b_int_ef
+        self.post = self.b_int_n_elec
+
+    def set_BC_J_op(self):
+        '''Sets J-BC-operator, requires nabla_k H(k) and a defined basis.'''
+        self.prec    = "12.3e"
+        self.op = self.BC_op_op
+        self.expval = self.BC_op_expval
+        self.expval_all_k = self.BC_op_expval
        #self.post = self.b_int_ef
         self.post = self.b_int_n_elec
 
@@ -222,7 +247,8 @@ class operator:
 
         if self.ham.spin == True:
             one = np.diag(np.ones(2))
-            L = np.kron(one,L)
+           #L = np.kron(one,L)
+            L = np.kron(np.eye(2),L)
         return L
 
     def J_op(self,k=None,evals=None,evecs=None):
@@ -250,15 +276,26 @@ class operator:
         BC_op = np.zeros((3,self.ham.n_bands))
         return BC_op
 
-    def BC_spin_op(self,k=None,evals=None,evecs=None):
+###    Not needed anymore, replaced by BC_op_op
+###    def BC_spin_op(self,k=None,evals=None,evecs=None):
+###        '''Generates an empty array.
+###           Spin-BC expectation value is calculated with a more efficient function.
+###           Components  1- 4: Bx*s
+###           Components  5- 8: By*s
+###           Components  9-12: Bz*s
+###        '''
+###        BC_spin_op = np.zeros((12,self.ham.n_bands))
+###        return BC_spin_op
+
+    def BC_op_op(self,k=None,evals=None,evecs=None):
         '''Generates an empty array.
-           Spin-BC expectation value is calculated with a more efficient function.
-           Components  1- 4: Bx*s
-           Components  5- 8: By*s
-           Components  9-12: Bz*s
+           OP-BC expectation value is calculated with a more efficient function.
+           Components  1- 4: Bx*OP
+           Components  5- 8: By*OP
+           Components  9-12: Bz*OP
         '''
-        BC_spin_op = np.zeros((12,self.ham.n_bands))
-        return BC_spin_op
+        BC_op_op = np.zeros((12,self.ham.n_bands))
+        return BC_op_op
 
     def BC_mag_op(self,k=None,evals=None,evecs=None):
         '''Generates an empty array.
@@ -279,23 +316,30 @@ class operator:
         [np.fill_diagonal(Em_En[i],0.0001) for i in range(k.shape[0])]
         return Em_En
 
-    def calc_vel(self,k,evecs,spin=False):
+    def calc_vel(self,k,evecs,kind="standard"):
         '''Calculates the velocity operator matrixm <m|nabla_k H_k|n>.
            If spin=True, calculates the anti-commutator v=1/2{sigma,v}.
            See also: https://arxiv.org/pdf/1901.05651.pdf
         '''
-        if spin == False:
+        if kind == "standard":
             m_del_n = np.einsum('kdb,kcde,kef->kcbf',evecs.conj(),self.ham.del_hk(k),evecs,optimize=True)
-            diag = np.eye(self.ham.n_bands)[None,None]
+#           diag = np.eye(self.ham.n_bands)[None,None]
+
         else:
-            S = self.S_op()
-            S = np.roll(S,1,axis=0)
-            S[0] = 0.5*np.eye(S[0].shape[0]) # S[0]=1/2 identity matrix
+            if kind == "S":
+                op = self.S_op()
+            elif kind == "L":
+                op = self.L_op()
+            elif kind == "J":
+                op = self.J_op()
+            op = np.roll(op,1,axis=0)
+            op[0] = np.eye(op[0].shape[0]) # op[0]=1/2 identity matrix
             #### Calculate the anti-commutator
             del_hk = self.ham.del_hk(k)
-            v = np.einsum('slm,kcmn->kcsln',S,del_hk) + np.einsum('kclm,smn->kcsln',del_hk,S)
+            v = 0.5*(np.einsum('slm,kcmn->kcsln',op,del_hk) + np.einsum('kclm,smn->kcsln',del_hk,op))
             m_del_n = np.einsum('kdb,kcsde,kef->kcsbf',evecs.conj(),v,evecs,optimize=True)
-            diag = np.eye(self.ham.n_bands)[None,None,None]
+#           diag = np.eye(self.ham.n_bands)[None,None,None]
+
 
         #### Cheaty way to set diag of m_del_n to 0
         #don't use this!!!
@@ -320,8 +364,47 @@ class operator:
         BC =-2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n,-2,axis=1),optimize=True))
         return BC
 
-    def BC_spin_expval(self,k=None,evals=None,evecs=None):
-        ''' Calculates Berry curvature:
+### Not needed anymore, can be deleted if function BC_op_expval is sufficiently tested
+###    def BC_spin_expval(self,k=None,evals=None,evecs=None):
+###        ''' Calculates Berry curvature:
+###                <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
+###        m = -Im -----------------------------------
+###                            (E_m - E_n)^2
+###        Note: the expectation value <m|nabla_k H_k|n>/(E_m - E_n) are written as line vectors in m_del_n.
+###        use np.roll to generate the permutation.
+###        '''
+###
+###        Em_En    = self.calc_Em_En(k,evals)
+###        m_del_n  = self.calc_vel(k,evecs,"spin")
+###        m_del_n /= Em_En[:,None,None]
+###        m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
+####       BC_spin =-2*np.imag(np.einsum('kcsji,kcji->kcsi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True))
+###        BC_spin =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
+###                           -np.einsum('kcmn,kcsmn->kcsn',np.roll(m_del_n[:,:,0],-1,axis=1),np.roll(np.conj(m_del_n),-2,axis=1),optimize=True))
+###        BC_spin = BC_spin.reshape((k.shape[0],12,self.ham.n_bands))
+###        return BC_spin
+###
+###    def BC_oam_expval(self,k=None,evals=None,evecs=None):
+###        ''' Calculates Berry curvature:
+###                <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
+###        m = -Im -----------------------------------
+###                            (E_m - E_n)^2
+###        Note: the expectation value <m|nabla_k H_k|n>/(E_m - E_n) are written as line vectors in m_del_n.
+###        use np.roll to generate the permutation.
+###        '''
+###
+###        Em_En    = self.calc_Em_En(k,evals)
+###        m_del_n  = self.calc_vel(k,evecs,"spin")
+###        m_del_n /= Em_En[:,None,None]
+###        m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
+###        BC_oam =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
+###                           -np.einsum('kcmn,kcsmn->kcsn',np.roll(m_del_n[:,:,0],-1,axis=1),np.roll(np.conj(m_del_n),-2,axis=1),optimize=True))
+###        BC_oam = BC_oam.reshape((k.shape[0],12,self.ham.n_bands))
+###        return BC_oam
+
+    def BC_op_expval(self,k=None,evals=None,evecs=None):
+        ''' General function for calculating the projected BC with velocity operator V = {v,op}.
+        Calculates Berry curvature:
                 <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
         m = -Im -----------------------------------
                             (E_m - E_n)^2
@@ -330,14 +413,13 @@ class operator:
         '''
 
         Em_En    = self.calc_Em_En(k,evals)
-        m_del_n  = self.calc_vel(k,evecs,True)
+        m_del_n  = self.calc_vel(k,evecs,self.BC_type)
         m_del_n /= Em_En[:,None,None]
         m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
-#       BC_spin =-2*np.imag(np.einsum('kcsji,kcji->kcsi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True))
-        BC_spin =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
+        BC_op =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
                            -np.einsum('kcmn,kcsmn->kcsn',np.roll(m_del_n[:,:,0],-1,axis=1),np.roll(np.conj(m_del_n),-2,axis=1),optimize=True))
-        BC_spin = BC_spin.reshape((k.shape[0],12,self.ham.n_bands))
-        return BC_spin
+        BC_op = BC_op.reshape((k.shape[0],12,self.ham.n_bands))
+        return BC_op
 
     def BC_mag_expval(self,k=None,evals=None,evecs=None):
         ''' Calculates orbital moment of the Bloch state:
