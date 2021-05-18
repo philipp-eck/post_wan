@@ -172,6 +172,19 @@ class hamiltonian:
             hk_out = np.einsum("ikl,ai->akl",self.hr_spinless, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=self.hk_path)
         return hk_out
 
+    def make_spinfull(self):
+        '''Creates a spin-full Hamiltonian, by introducing the spin degrees of freedom,
+           e.g. to add SOC by hand.
+        '''
+
+        if self.spin == True:
+            print("Hamiltonian is already spin-full...")
+        else:
+           self.hr = np.kron(np.eye(2),self.hr)
+           self.spin = True
+           self.n_bands *= 2
+           print("Hamiltonian is now spin-full, contains "+str(self.n_bands)+" bands.")
+
     def w2dynamics_hk(self,grid,filename):
         '''Performs Fourier transformation on a Gamma-centered Monkhorst grid
            and writes output in w2-readable format.'''

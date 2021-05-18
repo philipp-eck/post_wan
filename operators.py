@@ -1,6 +1,7 @@
 #! /bin/python
 ### operator class, sub-class of observables. 
 import numpy as np
+import scipy.stats
 import scipy.ndimage
 from hamiltonian import hamiltonian 
 class operator:
@@ -29,6 +30,7 @@ class operator:
         self.val     = None
         self.val_b_int = None
         self.val_k_int = None
+        self.val_kE_int= None
         self.f_spec  = ''
         self.prec    = "9.4f"
         self.post    = self.no_post
@@ -627,17 +629,35 @@ class operator:
             self.val_b_int = np.sum(val_int, axis = 2)
 
 
-    def k_int(self,evals,nbins=1000,sigma=0.1):
-        '''Performs k-integration by using a histogram.'''
-        self.val_k_int = np.zeros((np.shape(self.val)[1]+2,nbins))
-        dos = np.histogram(evals,nbins)
+    def k_int(self,evals,sigma=0.05,wstep=0.001):
+        '''Performs k-integration by using a histogram.
+           Integrates over the energy axis in the second step.
+        '''
+        ### taken from w2dyn
+       # sigma = .05 #* discr  # on average, take smoothen over 2 energy levels
+        wborder = 3*sigma
+       # wstep = .001 # put into small bins, and let the filter work its magic
+        wmin = np.around(np.amin(evals) - wborder, 3)
+        wmax = np.around(np.amax(evals) + wborder, 3) + 1e-4
+        w = np.arange(wmin, wmax, wstep)
+        self.val_k_int = np.zeros((np.shape(self.val)[1]+2,len(w)-1))
+        dos = np.histogram(evals,w)
         self.val_k_int[0] = (dos[1][1:]+dos[1][:-1])/2
-        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma)/evals.shape[0]*nbins
+        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma/wstep,truncate=40)/evals.shape[0]/wstep
+        print("Integrated total DOS:",scipy.integrate.simps(self.val_k_int[1],self.val_k_int[0]))
+        print("Summed total DOS:", np.sum(dos[0])/evals.shape[0])
+        self.val_kE_int = np.zeros_like(self.val_k_int)
+        self.val_kE_int[0] = self.val_k_int[0]
+       #self.val_kE_int[1] = scipy.stats.rv_histogram(dos).cdf(self.val_kE_int[0])          
+       #self.val_kE_int[1,:-1] = scipy.integrate.cumtrapz(self.val_k_int[1],self.val_k_int[0])
+        self.val_kE_int[1] = np.cumsum(dos[0])
         for dim in range(np.shape(self.val)[1]):
-            self.val_k_int[dim+2] = scipy.ndimage.filters.gaussian_filter1d(np.histogram(evals,nbins,weights=self.val[:,dim])[0],sigma)/evals.shape[0]*nbins
-           
-
-
+            dos_i = np.histogram(evals,w,weights=self.val[:,dim])
+            self.val_k_int[dim+2]  = scipy.ndimage.filters.gaussian_filter1d(dos_i[0],sigma/wstep)/evals.shape[0]/wstep
+           #self.val_kE_int[dim+2] = scipy.stats.rv_histogram(dos_i).cdf(self.val_kE_int[0])
+           #self.val_kE_int[dim+2,:-1] = scipy.integrate.cumtrapz(self.val_k_int[dim+2],self.val_kE_int[0])
+            self.val_kE_int[dim+2] = np.cumsum(dos_i[0])
+       #self.val_kE_int[:,-1] = self.val_kE_int[:,-2]
     #### Further post-processing
     def sphere_winding(self,ste,steps):
         '''Calculates the winding number/Pontryagin index for a given vector field calculated on the unit sphere.
