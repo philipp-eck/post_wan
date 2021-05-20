@@ -19,6 +19,7 @@ class operator:
         post          # Function for postprocessing
         ham           # Hamiltonian, required for Hamiltonian dependent operators
         expval        # Function, wich is called for k-dependent operators for calculating the expectation value
+        V             # Volume element for k-integration
     '''
        
 
@@ -36,6 +37,7 @@ class operator:
         self.post    = self.no_post
         self.ham     = HAMILTONIAN
         self.expval  = None
+        self.V      = 1
         if self.op_type == "S":
             self.set_S_op()
         elif self.op_type == "L":
@@ -101,7 +103,7 @@ class operator:
         self.expval_all_k = self.BC_expval 
        #self.post = self.b_int_ef
         self.post = self.b_int_n_elec
-
+        self.V   = None
     def set_BC_spin_op(self):
         '''Sets spin-BC-operator, requires nabla_k H(k).'''
         self.prec    = "12.3e"
@@ -110,6 +112,7 @@ class operator:
         self.expval_all_k = self.BC_op_expval
        #self.post = self.b_int_ef
         self.post = self.b_int_n_elec
+        self.V   = None
 
     def set_BC_oam_op(self):
         '''Sets OAM-BC-operator, requires nabla_k H(k) and a defined basis.'''
@@ -119,6 +122,7 @@ class operator:
         self.expval_all_k = self.BC_op_expval
        #self.post = self.b_int_ef
         self.post = self.b_int_n_elec
+        self.V   = None
 
     def set_BC_J_op(self):
         '''Sets J-BC-operator, requires nabla_k H(k) and a defined basis.'''
@@ -128,6 +132,7 @@ class operator:
         self.expval_all_k = self.BC_op_expval
        #self.post = self.b_int_ef
         self.post = self.b_int_n_elec
+        self.V   = None
 
     def set_BC_mag_op(self):
         '''Sets BC_mag-operator, requires nabla_k H(k).'''
@@ -136,6 +141,7 @@ class operator:
         self.expval = self.BC_mag_expval
         self.expval_all_k = self.BC_mag_expval
         self.post = self.b_int_ef
+        self.V   = None
 
     def set_Orb_SOC_inv(self):
         '''Sets Orb-SOC-inversion operator.'''
@@ -329,7 +335,8 @@ class operator:
 
         else:
             if kind == "S":
-                op = self.S_op()
+                # Multiply by two, since we want the commutator {sigma,v}
+                op = self.S_op()*2
             elif kind == "L":
                 op = self.L_op()
             elif kind == "J":
@@ -633,6 +640,11 @@ class operator:
         '''Performs k-integration by using a histogram.
            Integrates over the energy axis in the second step.
         '''
+        ### BZ Volume element by calculating the triple product
+        if self.V == None:
+            ### Actually 2pi³, however the factor 2pi is not considered in del_hk
+            self.V = (2*np.pi)**1/np.abs(np.dot(np.cross(self.ham.bra_vec[0],self.ham.bra_vec[1]),self.ham.bra_vec[2]))
+
         ### taken from w2dyn
        # sigma = .05 #* discr  # on average, take smoothen over 2 energy levels
         wborder = 3*sigma
@@ -644,19 +656,19 @@ class operator:
         dos = np.histogram(evals,w)
         self.val_k_int[0] = (dos[1][1:]+dos[1][:-1])/2
         self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma/wstep,truncate=40)/evals.shape[0]/wstep
-        print("Integrated total DOS:",scipy.integrate.simps(self.val_k_int[1],self.val_k_int[0]))
-        print("Summed total DOS:", np.sum(dos[0])/evals.shape[0])
+#       print("Integrated total DOS:",scipy.integrate.simps(self.val_k_int[1],self.val_k_int[0]))
+#       print("Summed total DOS:", np.sum(dos[0])/evals.shape[0])
         self.val_kE_int = np.zeros_like(self.val_k_int)
         self.val_kE_int[0] = self.val_k_int[0]
        #self.val_kE_int[1] = scipy.stats.rv_histogram(dos).cdf(self.val_kE_int[0])          
        #self.val_kE_int[1,:-1] = scipy.integrate.cumtrapz(self.val_k_int[1],self.val_k_int[0])
-        self.val_kE_int[1] = np.cumsum(dos[0])
+        self.val_kE_int[1] = np.cumsum(dos[0])/evals.shape[0]
         for dim in range(np.shape(self.val)[1]):
             dos_i = np.histogram(evals,w,weights=self.val[:,dim])
-            self.val_k_int[dim+2]  = scipy.ndimage.filters.gaussian_filter1d(dos_i[0],sigma/wstep)/evals.shape[0]/wstep
+            self.val_k_int[dim+2]  = scipy.ndimage.filters.gaussian_filter1d(dos_i[0],sigma/wstep)/evals.shape[0]/wstep*self.V
            #self.val_kE_int[dim+2] = scipy.stats.rv_histogram(dos_i).cdf(self.val_kE_int[0])
            #self.val_kE_int[dim+2,:-1] = scipy.integrate.cumtrapz(self.val_k_int[dim+2],self.val_kE_int[0])
-            self.val_kE_int[dim+2] = np.cumsum(dos_i[0])
+            self.val_kE_int[dim+2] = np.cumsum(dos_i[0])/evals.shape[0]*self.V
        #self.val_kE_int[:,-1] = self.val_kE_int[:,-2]
     #### Further post-processing
     def sphere_winding(self,ste,steps):
