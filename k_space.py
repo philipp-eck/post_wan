@@ -7,7 +7,7 @@ class k_space:
        We use reduced coordinates for the Fourier-transform of H(R)
        and cartesian vectors for the output files.
        Instance attributes:
-       k_type        # Defines the called function for generating the k-space {mesh,path}
+       k_type        # Defines the called function for generating the k-space {path,plane,self-defined,monkhorst,sphere,sphere_ster_proj}
        k_basis       # Defines the basis, cartesian or reduced coordinates
        vecs          # Vectors spanning the path/mesh, has to be a 2-dim matrix
        bra_vec       # Bravais vectors of the corresponding crystal structure/Hamiltonian
@@ -78,7 +78,8 @@ class k_space:
             if self.bra_vec is not None:
                self.k_space_car = self.red_to_car(self.k_space_red)
             self.k_kind = "mesh"
-           #self.k_space_car = self.red_to_car(bra_vec,self.k_space_red)
+            if type(self.bra_vec) == np.ndarray:
+               self.k_space_car = self.red_to_car(self.k_space_red)
 
         if self.k_type == "self-defined":
             self.k_space_red = self.vecs_red

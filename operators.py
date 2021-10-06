@@ -573,7 +573,7 @@ class operator:
                P[:,ind+1,ind+1] = p2* 1j/np.sqrt(2)
                ind += 2
 
-        #Expectation value. Note: <P|Psi> is calculated
+        #Expectation value. Note: |<P|Psi>|^2 is calculated and returned
         if k.ndim == 2:
             P_Psi = np.einsum("EijK,Kjk->KEik",P,evecs)
             exp_val = np.einsum("KEii->KEi",np.einsum("KEji,KEjk->KEik",P_Psi.conj(),P_Psi,optimize=True),optimize=True)
