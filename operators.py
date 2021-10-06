@@ -430,7 +430,7 @@ class operator:
         m_del_n /= Em_En[:,None,None]
         m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
         BC_op =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
-                           -np.einsum('kcmn,kcsmn->kcsn',np.roll(m_del_n[:,:,0],-1,axis=1),np.roll(np.conj(m_del_n),-2,axis=1),optimize=True))
+                         -np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-2,axis=1),np.roll(m_del_n[:,:,0],-1,axis=1),optimize=True))
         BC_op = BC_op.reshape((k.shape[0],12,self.ham.n_bands))
         return BC_op
 

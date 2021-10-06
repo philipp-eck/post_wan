@@ -214,7 +214,7 @@ class hamiltonian:
         '''
         R_index = np.argwhere(np.all((self.R[:,:3]-R)==0, axis=1))
         H_R = self.hr[R_index][0,0]
-
+        print("Bravais weight: ",np.squeeze(self.R[R_index,3]),end="\n\n")
         if part == "complex":
             def print_H_R(i,j):
                 fs = "{:"+f+"}{:"+f+"} "
