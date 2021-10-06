@@ -346,6 +346,10 @@ class operator:
             #### Calculate the anti-commutator
             del_hk = self.ham.del_hk(k)
             v = 0.5*(np.einsum('slm,kcmn->kcsln',op,del_hk) + np.einsum('kclm,smn->kcsln',del_hk,op))
+###            com_H = np.einsum("dij,Rjk->Rdik",op,self.ham.hr)-np.einsum("Rij,cjk->Rcik",self.ham.hr,op)
+###            com_H[:,0] = self.ham.hr
+###            v = 1j*np.einsum("Rc,Rdnm,Rk->kcdnm",self.ham.R_cart,com_H,
+###                                    np.exp(1j*2*np.pi*np.einsum("rj,kj->rk",self.ham.R,k)),optimize=True)
             m_del_n = np.einsum('kdb,kcsde,kef->kcsbf',evecs.conj(),v,evecs,optimize=True)
 #           diag = np.eye(self.ham.n_bands)[None,None,None]
 
