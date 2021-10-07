@@ -584,7 +584,7 @@ class operator:
         else:
             P_Psi = np.einsum("Eij,jk->Eik",P,evecs)
             exp_val = np.einsum("Eii->Ei",np.einsum("Eji,Kjk->Eik",P_Psi.conj(),P_Psi,optimize=True),optimize=True)
-        return np.abs(exp_val)
+        return np.abs(exp_val)**2
     def initialize_val(self,nk):
         '''Initializes the val array in which the calculated expecation values are saved.
            Creates format specifier string.
