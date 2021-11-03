@@ -181,7 +181,7 @@ class observables:
         '''Calculates k-integrated expecation values.'''
         for op_type in self.op_types+self.op_types_k:
             print("Calculating k-integrated values of "+op_type+".")
-            self.ops[op_type].k_int(self,sigma=0.05,wstep=0.001,sigma)
+            self.ops[op_type].k_int(self,sigma=0.05,wstep=0.001)
 
         if write==True:
            self.write_k_int()
