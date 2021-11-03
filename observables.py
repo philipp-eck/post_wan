@@ -5,7 +5,7 @@ from operators   import operator
 from hamiltonian import hamiltonian
 from k_space     import k_space
 import time
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 #Parallelization
 #from joblib import Parallel, delayed
@@ -177,11 +177,11 @@ class observables:
                 print("Running post-processing for operator "+op_type+".")
                 self.ops[op_type].post(self.evals)
 
-    def k_int(self,nbins,sigma,write=True):
+    def k_int(self,sigma=0.05,wstep=0.001,write=True):
         '''Calculates k-integrated expecation values.'''
         for op_type in self.op_types+self.op_types_k:
             print("Calculating k-integrated values of "+op_type+".")
-            self.ops[op_type].k_int(self.evals,nbins,sigma)
+            self.ops[op_type].k_int(self,sigma=0.05,wstep=0.001,sigma)
 
         if write==True:
            self.write_k_int()
