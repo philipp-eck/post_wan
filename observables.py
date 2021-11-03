@@ -87,7 +87,7 @@ class observables:
             return val
 
         self.evals = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands))
-        self.evecs = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands,self.ham.n_bands),dtype=complex)
+        self.evecs = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands,self.ham.n_bands),dtype=np.csingle)
         def calc_k(i_k,k_i):
             '''Calls expval() for each operator on a single k-point.
                Transforms k_i.dim=1 to k_i.dim=2 for using the all k-point routines.'''
@@ -177,11 +177,11 @@ class observables:
                 print("Running post-processing for operator "+op_type+".")
                 self.ops[op_type].post(self.evals)
 
-    def k_int(self,nbins,sigma,write=True):
+    def k_int(self,wstep,sigma,write=True):
         '''Calculates k-integrated expecation values.'''
         for op_type in self.op_types+self.op_types_k:
             print("Calculating k-integrated values of "+op_type+".")
-            self.ops[op_type].k_int(self.evals,nbins,sigma)
+            self.ops[op_type].k_int(self.evals,wstep,sigma)
 
         if write==True:
            self.write_k_int()
@@ -327,12 +327,12 @@ class z2_wcc:
                 k[:,p] = 0.5/(self.n_pump[0]-1)*k1
                 k[:,f] = np.linspace(0,1,self.n_pump[1],endpoint=False)
                 k[:,n] = k_normal
-                hk = np.zeros((self.n_pump[1],self.ham.n_bands,self.ham.n_bands),dtype=complex)
+                hk = np.zeros((self.n_pump[1],self.ham.n_bands,self.ham.n_bands),dtype=np.csingle)
                 #for k2 in range(self.n_pump[1]):
                 #    hk[k2] = self.ham.hk(k[k2])
                 
                 evals,evecs = np.linalg.eigh(self.ham.hk(k),UPLO="U")
-                M = np.zeros((self.ham.n_elec,self.ham.n_elec),dtype="complex")+np.identity(self.ham.n_elec)
+                M = np.zeros((self.ham.n_elec,self.ham.n_elec),dtype="np.csingle")+np.identity(self.ham.n_elec)
                 for k2 in range(self.n_pump[1]-1):
                     M = np.einsum("ij,jk",M,np.einsum("ji,jk->ik",np.conj(evecs[k2,:,:self.ham.n_elec]),evecs[k2+1,:,:self.ham.n_elec]))
                 M = np.einsum("ij,jk",M,np.einsum("ji,jk->ik",np.conj(evecs[self.n_pump[1]-1,:,:self.ham.n_elec]),evecs[0,:,:self.ham.n_elec]))

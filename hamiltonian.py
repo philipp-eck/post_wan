@@ -125,19 +125,14 @@ class hamiltonian:
 
     def hk(self,k_red):
         '''Performs Fouriert-transform at given point in reduced coordinates. Expects k_red.dim=2.
-           Remove out-commented part if testet sufficiently.
         '''
-#       if k_red.ndim == 1:
-#           hk_out = np.einsum("ikl,i",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3])
-#       elif k_red.ndim == 2:
-#       hk_out = np.einsum("ikl,ai->akl",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=self.hk_path)
-        hk_out = np.einsum("ikl,ai->akl",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
+        hk_out = np.einsum("Rmn,...R->...mn",self.hr, np.exp(1j*2*np.pi*np.einsum("Rb,...b->...R",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
         return hk_out
 
     def hk_parallel(self,k_red):
         '''Performs FT k-parallelized. Currently not used!!!
         '''
-        hk_out = np.zeros((np.shape(k_red)[0],self.n_bands,self.n_bands),dtype="complex")
+        hk_out = np.zeros((np.shape(k_red)[0],self.n_bands,self.n_bands),dtype="np.csingle")
 
         def hk_k(i_k):
             hk_out[i_k] = np.einsum("ikl,i",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red[i_k]))/self.R[:,3])
@@ -153,7 +148,8 @@ class hamiltonian:
 #       if k_red.ndim == 1:
 #           del_hk_out = 1j* np.einsum("ij,ikl,i->jkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3],optimize=False)
 #       elif k_red.ndim == 2:
-        del_hk_out = 1j* np.einsum("ij,ikl,ai->ajkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)#self.del_hk_path)
+#       del_hk_out = 1j* np.einsum("ij,ikl,ai->ajkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)#self.del_hk_path)
+         del_hk_out = 1j* np.einsum("Rc,Rmn,...R->...jmn",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("Rb,...b",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
         return del_hk_out
 
 

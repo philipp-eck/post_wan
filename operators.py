@@ -68,7 +68,7 @@ class operator:
 
     def set_empty_op(self):
         '''Creates an empty k-independent operator'''
-        self.op = np.zeros((self.dim,self.ham.n_bands,self.ham.n_bands),dtype=complex)
+        self.op = np.zeros((self.dim,self.ham.n_bands,self.ham.n_bands),dtype=np.csingle)
     
     def set_S_op(self):
         '''Sets the spin-operators in the wannier90 (VASP) basis.
@@ -164,7 +164,7 @@ class operator:
         sx = np.array([[0,1],[1,0]])/2.0
         sy = np.array([[0,-1],[1,0]])*1j/2.0
         sz = np.array([[1,0],[0,-1]])/2.0
-        S = np.zeros((4,self.ham.n_orb*2,self.ham.n_orb*2),dtype=complex)
+        S = np.zeros((4,self.ham.n_orb*2,self.ham.n_orb*2),dtype=np.csingle)
         S[:3] = np.array((np.kron(sx,one),np.kron(sy,one),np.kron(sz,one)))
         ### S^2
         for i in range(3):
@@ -181,10 +181,10 @@ class operator:
         # L_y = -i/2(L_+ - L_-)
         # L_+|j,m> = hbar sqrt(j(j+1)-m(m+1))|j,m+1>
         # L_-|j,m> = hbar sqrt(j(j+1)-m(m-1))|j,m-1>
-        L = np.zeros((4,self.ham.n_orb,self.ham.n_orb),dtype=complex)
+        L = np.zeros((4,self.ham.n_orb,self.ham.n_orb),dtype=np.csingle)
         # we rotate the L-operator in the tesseral harmonics eigenbasis
         ### build up rotation matrix
-        u = np.zeros((self.ham.n_orb,self.ham.n_orb), dtype=complex)
+        u = np.zeros((self.ham.n_orb,self.ham.n_orb), dtype=np.csingle)
         ind = 0
         for j in self.ham.basis:
             u[ind,ind] = 1
@@ -219,7 +219,7 @@ class operator:
 
         #### L_y ####
         ### build up L_y operator
-        op = np.zeros((self.ham.n_orb,self.ham.n_orb),dtype=complex)
+        op = np.zeros((self.ham.n_orb,self.ham.n_orb),dtype=np.csingle)
         i0 = 0                                    # index of the m=0 element
         for j in self.ham.basis:
             if j > 0:
@@ -267,7 +267,7 @@ class operator:
         # Note: We compute also J^2 -> J=(J_x,J_y,_z,J^2)
 
         ### J^2 and J_i in tesseral harmonics basis
-        J = np.zeros((4,self.ham.n_bands,self.ham.n_bands),dtype=complex)
+        J = np.zeros((4,self.ham.n_bands,self.ham.n_bands),dtype=np.csingle)
         S = self.S_op()
         L = self.L_op()
         for i in range(3):
@@ -549,9 +549,9 @@ class operator:
         # we rotate the L-operator in the tesseral harmonics eigenbasis
         ### build up rotation matrix
         if k.ndim == 2:
-            P = np.zeros((2,self.ham.n_bands,self.ham.n_bands,np.shape(k)[0]), dtype=complex)
+            P = np.zeros((2,self.ham.n_bands,self.ham.n_bands,np.shape(k)[0]), dtype=np.csingle)
         else:
-            P = np.zeros((2,self.ham.n_bands,self.ham.n_bands), dtype=complex)
+            P = np.zeros((2,self.ham.n_bands,self.ham.n_bands), dtype=np.csingle)
         def phase(lz,R,k):
             if k.ndim == 2:
                 out = np.exp(1j*2*np.pi*(lz*phi[None,None,:]+np.einsum("Kj,Eij->EKi",k,R))).sum(axis=2)/3.0

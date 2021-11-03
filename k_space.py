@@ -90,12 +90,12 @@ class k_space:
 
     def car_to_red(self,car):
         '''Transforms from cartesian into reduced coordinates'''
-        red = np.einsum("ij,kj->ki",self.bra_vec,car)/(2*np.pi)
+        red = np.einsum("ij,...j->...i",self.bra_vec,car)/(2*np.pi)
         return red
 
     def red_to_car(self,red):
         '''Transforms from reduced into cartesian coordinates'''
-        car = np.einsum("ij,kj->ki",np.linalg.inv(self.bra_vec),red)*2*np.pi
+        car = np.einsum("ij,...j->...i",np.linalg.inv(self.bra_vec),red)*2*np.pi
         return car
 
 
