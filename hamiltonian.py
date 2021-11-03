@@ -149,7 +149,7 @@ class hamiltonian:
 #           del_hk_out = 1j* np.einsum("ij,ikl,i->jkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3],optimize=False)
 #       elif k_red.ndim == 2:
 #       del_hk_out = 1j* np.einsum("ij,ikl,ai->ajkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)#self.del_hk_path)
-         del_hk_out = 1j* np.einsum("Rc,Rmn,...R->...jmn",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("Rb,...b",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
+        del_hk_out = 1j* np.einsum("Rc,Rmn,...R->...jmn",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("Rb,...b",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
         return del_hk_out
 
 
