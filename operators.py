@@ -660,7 +660,7 @@ class operator:
         self.val_k_int = np.zeros((np.shape(self.val)[1]+2,len(w)-1))
         dos = np.histogram(evals,w)
         self.val_k_int[0] = (dos[1][1:]+dos[1][:-1])/2
-        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma/wstep,truncate=40)/evals.shape[0]/wstep
+        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma/wstep,truncate=20)/evals.shape[0]/wstep
 #       print("Integrated total DOS:",scipy.integrate.simps(self.val_k_int[1],self.val_k_int[0]))
 #       print("Summed total DOS:", np.sum(dos[0])/evals.shape[0])
         self.val_kE_int = np.zeros_like(self.val_k_int)
@@ -670,7 +670,7 @@ class operator:
         self.val_kE_int[1] = np.cumsum(dos[0])/evals.shape[0]
         for dim in range(np.shape(self.val)[1]):
             dos_i = np.histogram(evals,w,weights=self.val[:,dim])
-            self.val_k_int[dim+2]  = scipy.ndimage.filters.gaussian_filter1d(dos_i[0],sigma/wstep)/evals.shape[0]/wstep*self.V
+            self.val_k_int[dim+2]  = scipy.ndimage.filters.gaussian_filter1d(dos_i[0],sigma/wstep,truncate=20)/evals.shape[0]/wstep*self.V
            #self.val_kE_int[dim+2] = scipy.stats.rv_histogram(dos_i).cdf(self.val_kE_int[0])
            #self.val_kE_int[dim+2,:-1] = scipy.integrate.cumtrapz(self.val_k_int[dim+2],self.val_kE_int[0])
             self.val_kE_int[dim+2] = np.cumsum(dos_i[0])/evals.shape[0]*self.V
