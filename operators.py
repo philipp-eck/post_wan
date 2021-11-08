@@ -666,13 +666,13 @@ class operator:
         self.val_kE_int[0] = self.val_k_int[0]
        #self.val_kE_int[1] = scipy.stats.rv_histogram(dos).cdf(self.val_kE_int[0])          
        #self.val_kE_int[1,:-1] = scipy.integrate.cumtrapz(self.val_k_int[1],self.val_k_int[0])
-        self.val_kE_int[1] = np.cumsum(dos[0])/evals.shape[0]
+        self.val_kE_int[1] = np.cumsum(dos[0])/np.prod(evals.shape[:-2])
         for dim in range(np.shape(self.val)[1]):
             dos_i = np.histogram(evals,w,weights=self.val[:,dim])
             self.val_k_int[dim+2]  = scipy.ndimage.filters.gaussian_filter1d(dos_i[0],sigma/wstep,truncate=20)/evals.shape[0]/wstep*self.V
            #self.val_kE_int[dim+2] = scipy.stats.rv_histogram(dos_i).cdf(self.val_kE_int[0])
            #self.val_kE_int[dim+2,:-1] = scipy.integrate.cumtrapz(self.val_k_int[dim+2],self.val_kE_int[0])
-            self.val_kE_int[dim+2] = np.cumsum(dos_i[0])/evals.shape[0]*self.V
+            self.val_kE_int[dim+2] = np.cumsum(dos_i[0])//np.prod(evals.shape[:-2])*self.V
        #self.val_kE_int[:,-1] = self.val_kE_int[:,-2]
     #### Further post-processing
     def sphere_winding(self,ste,steps):
@@ -755,7 +755,8 @@ if __name__== "__main__":
     print("Spin-operator: commutator test...")
     commutator_L(s_spinfull.op)
     print('Testing function "initialize_val"...')
-    s_spinfull.initialize_val(3)
+    kdim = (3,)
+    s_spinfull.initialize_val(kdim)
     print("Shape val",np.shape(s_spinfull.val))
     print("Testing L-Operator...")
     L_op = operator("L",my_ham)
@@ -766,20 +767,20 @@ if __name__== "__main__":
     print("Testing BC-Operator...")
     BC_op = operator("BC",my_ham)
     print('Testing function "initialize_val_k" for k-dependent operators...')
-    BC_op.initialize_val_k(3)
+    BC_op.initialize_val_k(kdim)
     print(np.shape(BC_op.val))
     print('Testing a self-defined operator with one component input...')
     self_def_op = operator("self_def",my_ham)
     print('Define operator matrix by hand.')
     self_def_op.op = np.eye(my_ham.n_bands)
-    self_def_op.initialize_val(5)
+    self_def_op.initialize_val(kdim)
     print(np.shape(self_def_op.op))
 
     print('Testing a self-defined operator with multidimensional input...')
     self_def_op = operator("self_def",my_ham)
     print('Define operator matrix by hand.')
     self_def_op.op = np.array([np.eye(my_ham.n_bands),np.eye(my_ham.n_bands)])
-    self_def_op.initialize_val(5)
+    self_def_op.initialize_val(kdim)
     print(np.shape(self_def_op.op))
 
     print('Testing operator "E_triang"...')
