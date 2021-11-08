@@ -318,10 +318,11 @@ class operator:
     def calc_Em_En(self,k,evals):
         '''Computes the denominator matrix (E_m-E_n) and sets diagonal to 1.
         '''
-        Em_En  = np.reshape(np.kron(np.ones(self.ham.n_bands),evals),(np.shape(k)[0],self.ham.n_bands,self.ham.n_bands))
-        Em_En -= np.transpose(Em_En,(0,2,1))
+        Em_En  = np.reshape(np.kron(np.ones(self.ham.n_bands),evals),k.shape[:-1]+(self.ham.n_bands,self.ham.n_bands))
+        Em_En -= np.einsum('...ij->...ji',Em_En)
         #[np.fill_diagonal(Em_En[i],np.Inf) for i in range(k.shape[0])]
-        [np.fill_diagonal(Em_En[i],0.0001) for i in range(k.shape[0])]
+        #[np.fill_diagonal(Em_En[i],0.0001) for i in range(k.shape[0])]
+        Em_En += (0.0001*np.eye(self.ham.n_bands))[...,:,:]
         return Em_En
 
     def calc_vel(self,k,evecs,kind="standard"):
@@ -330,7 +331,7 @@ class operator:
            See also: https://arxiv.org/pdf/1901.05651.pdf
         '''
         if kind == "standard":
-            m_del_n = np.einsum('kdb,kcde,kef->kcbf',evecs.conj(),self.ham.del_hk(k),evecs,optimize=True)
+            m_del_n = np.einsum('...db,...cde,...ef->...cbf',evecs.conj(),self.ham.del_hk(k),evecs,optimize=True)
 #           diag = np.eye(self.ham.n_bands)[None,None]
 
         else:
@@ -345,12 +346,12 @@ class operator:
             op[0] = np.eye(op[0].shape[0]) # op[0]=1/2 identity matrix
             #### Calculate the anti-commutator
             del_hk = self.ham.del_hk(k)
-            v = 0.5*(np.einsum('slm,kcmn->kcsln',op,del_hk) + np.einsum('kclm,smn->kcsln',del_hk,op))
+            v = 0.5*(np.einsum('slm,...cmn->...csln',op,del_hk) + np.einsum('kclm,smn->kcsln',del_hk,op))
 ###            com_H = np.einsum("dij,Rjk->Rdik",op,self.ham.hr)-np.einsum("Rij,cjk->Rcik",self.ham.hr,op)
 ###            com_H[:,0] = self.ham.hr
 ###            v = 1j*np.einsum("Rc,Rdnm,Rk->kcdnm",self.ham.R_cart,com_H,
 ###                                    np.exp(1j*2*np.pi*np.einsum("rj,kj->rk",self.ham.R,k)),optimize=True)
-            m_del_n = np.einsum('kdb,kcsde,kef->kcsbf',evecs.conj(),v,evecs,optimize=True)
+            m_del_n = np.einsum('...db,...csde,...ef->...csbf',evecs.conj(),v,evecs,optimize=True)
 #           diag = np.eye(self.ham.n_bands)[None,None,None]
 
 
@@ -373,8 +374,8 @@ class operator:
 
         Em_En    = self.calc_Em_En(k,evals)
         m_del_n  = self.calc_vel(k,evecs)
-        m_del_n /= Em_En[:,None]
-        BC =-2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n,-2,axis=1),optimize=True))
+        m_del_n /= Em_En[...,None,:,:]
+        BC =-2*np.imag(np.einsum('...dji,...dji->...di',np.roll(np.conj(m_del_n),-1,axis=-3),np.roll(m_del_n,-2,axis=-3),optimize=True))
         return BC
 
 ### Not needed anymore, can be deleted if function BC_op_expval is sufficiently tested
@@ -429,8 +430,8 @@ class operator:
         m_del_n  = self.calc_vel(k,evecs,self.BC_type)
         m_del_n /= Em_En[:,None,None]
         m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
-        BC_op =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
-                         -np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-2,axis=1),np.roll(m_del_n[:,:,0],-1,axis=1),optimize=True))
+        BC_op =-1*np.imag(np.einsum('...csmn,...cmn->...csn',np.roll(np.conj(m_del_n),-1,axis=-3),np.roll(m_del_n[:,:,0],-2,axis=-3),optimize=True)
+                         -np.einsum('...csmn,...cmn->...csn',np.roll(np.conj(m_del_n),-2,axis=-3),np.roll(m_del_n[:,:,0],-1,axis=-3),optimize=True))
         BC_op = BC_op.reshape((k.shape[0],12,self.ham.n_bands))
         return BC_op
 
@@ -445,7 +446,7 @@ class operator:
         Em_En    = self.calc_Em_En(k,evals)
         m_del_n  = self.calc_vel(k,evecs)
         m_del_n /= Em_En[:,None]
-        orb_mom =+2*np.imag(np.einsum('kdji,kdji->kdi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n*Em_En[:,None],-2,axis=1),optimize=True))
+        orb_mom =+2*np.imag(np.einsum('...dji,...dji->...di',np.roll(np.conj(m_del_n),-1,axis=-3),np.roll(m_del_n*Em_En[:,None],-2,axis=-3),optimize=True))
         return orb_mom
  
     def Orb_SOC_inv_op(self,k=None,evals=None,evecs=None):
@@ -457,7 +458,8 @@ class operator:
         return orb_soc_inv_op
 
     def Orb_SOC_inv_expval(self,k=None,evals=None,evecs=None):
-        '''Here we project eigenstates computed with H^soc onto the occupied eigenstates obtained without SOC
+        '''TO DO: rewrite this function in a k-array dimension-independent form.
+           Here we project eigenstates computed with H^soc onto the occupied eigenstates obtained without SOC
            n_occ: Total number of electrons
            We compute with Psi (soc) and psi (wo soc) the expectation value:
            <O_nk> = |<Psi_nk|Sum_i^n_occ |psi_ik><psi_ik|Psi_nk>
@@ -509,7 +511,9 @@ class operator:
             proj_un_occ = [np.kron(one2,evecs_wo_soc[i_k,:,n_occ:]) for i_k in range(np.shape(k)[0])]
             val_un_occ = np.einsum('aji,ajk->aik',np.conj(proj_un_occ),evecs)
             out[:,2]     = np.sum(np.abs(val_un_occ)**2,axis=1).real
-        
+
+        else:
+            print('Orb_soc_inv can currently only be calculated on a lines and grids, not on higher dimensional k-arrays. Sorry....') 
         return out
 
     def E_triang_op(self,k=None,evals=None,evecs=None):
@@ -548,15 +552,11 @@ class operator:
         phi = np.arange(3)/3
         # we rotate the L-operator in the tesseral harmonics eigenbasis
         ### build up rotation matrix
-        if k.ndim == 2:
-            P = np.zeros((2,self.ham.n_bands,self.ham.n_bands,np.shape(k)[0]), dtype=np.csingle)
-        else:
-            P = np.zeros((2,self.ham.n_bands,self.ham.n_bands), dtype=np.csingle)
+        P = np.zeros((2,self.ham.n_bands,self.ham.n_bands)+np.shape(k)[:-1], dtype=np.csingle)
         def phase(lz,R,k):
-            if k.ndim == 2:
-                out = np.exp(1j*2*np.pi*(lz*phi[None,None,:]+np.einsum("Kj,Eij->EKi",k,R))).sum(axis=2)/3.0
-            else:
-                out = np.exp(1j*2*np.pi*(lz*phi[None,:]+np.einsum("j,Eij->Ei",k,R))).sum(axis=1)/3.0
+            out = (np.einsum('i,E...i', 
+                             np.exp(1j*2*np.pi*lz*phi),
+                             np.einsum("...j,Eij->E...i",k,R))).sum(axis=-1)/3.0
             return out
 
         if self.ham.spin == False:
@@ -570,6 +570,7 @@ class operator:
             ind += 1
             for lz in range(1,j+1,1):
                p1 = phase(lz,R,k)
+               print(p1)
                P[:,ind  ,ind  ] = p1*(-1)**lz /np.sqrt(2)
                P[:,ind  ,ind+1] = p1*(-(-1)**lz) *1j /np.sqrt(2) ### follows from backtransform
                p2 = phase(-lz,R,k)
@@ -578,33 +579,31 @@ class operator:
                ind += 2
 
         #Expectation value. Note: |<P|Psi>|^2 is calculated and returned
-        if k.ndim == 2:
-            P_Psi = np.einsum("EijK,Kjk->KEik",P,evecs)
-            exp_val = np.einsum("KEii->KEi",np.einsum("KEji,KEjk->KEik",P_Psi.conj(),P_Psi,optimize=True),optimize=True)
-        else:
-            P_Psi = np.einsum("Eij,jk->Eik",P,evecs)
-            exp_val = np.einsum("Eii->Ei",np.einsum("Eji,Kjk->Eik",P_Psi.conj(),P_Psi,optimize=True),optimize=True)
+        P_Psi = np.einsum("Eij...,...jk->...Eik",P,evecs)
+        exp_val = np.einsum("...Eii->...Ei",np.einsum("...Eji,...Ejk->...Eik",P_Psi.conj(),P_Psi,optimize=True),optimize=True)
         #exp_val should be real by construction, take abs() to obtain real array.
         return np.abs(exp_val)
-    def initialize_val(self,nk):
+    def initialize_val(self,kdim):
         '''Initializes the val array in which the calculated expecation values are saved.
            Creates format specifier string.
            Checks the dimension of the Matrix, if NxN matrix, expand to 1xNxN.    
         '''
         if self.op.ndim == 2:
            self.op = np.array([self.op])
-        self.val = np.zeros((nk,np.shape(self.op)[0],self.ham.n_bands))
+        self.val = np.zeros(kdim+(np.shape(self.op)[0],self.ham.n_bands))
         for dim in range(np.shape(self.val)[1]):
             self.f_spec += '{d['+str(dim)+']:'+self.prec+'}'
 
-    def initialize_val_k(self,nk):
+    def initialize_val_k(self,kdim):
         '''Initializes the val array for k-dependent operators in which the calculated expecation values are saved.
            Creates format specifier string.'''
         k = np.array([0,0,0])
+        if type(kdim) == int:
+           kdim = (kdim,)
         evals = np.zeros(self.ham.n_bands)
         evecs = np.zeros((self.ham.n_bands,self.ham.n_bands))
-        self.val = np.zeros((nk,np.shape(self.op(k,evals,evecs))[0],self.ham.n_bands))
-        for dim in range(np.shape(self.val)[1]):
+        self.val = np.zeros(kdim+(np.shape(self.op(k,evals,evecs))[0],self.ham.n_bands))
+        for dim in range(np.shape(self.op(k,evals,evecs))[0]):
             self.f_spec += '{d['+str(dim)+']:'+self.prec+'}'
 
     ####General post-processing functions
@@ -616,7 +615,7 @@ class operator:
 
     def L_2(self,evals):
         '''Calculates L^2.'''
-        self.val[:,3] = (-1+np.sqrt(1+4*self.val[:,3]))/2
+        self.val[...,3] = (-1+np.sqrt(1+4*self.val[...,3]))/2
 
 
     def b_int_ef(self,evals):

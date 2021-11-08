@@ -17,7 +17,7 @@ bra_vec   = np.array([
    ])
 
 spin      = True
-basis     = np.array([0,1]) # {Ta1:d,Ta2:d,As1:p,As2:p}
+basis     = np.array([0,1]) # {In:s, In:p}
 n_elec    = 4
 
 Ham = hamiltonian(inputfile,bra_vec,spin,basis,N_ELEC=n_elec)
@@ -29,31 +29,23 @@ Ham = hamiltonian(inputfile,bra_vec,spin,basis,N_ELEC=n_elec)
 ktype     = "path"
 kbasis    = "red"
 vecs      = np.array([
-                      [ 1/3, 1/3,0],
-                      [ 1/2,   0,0],
-                      [   0,   0,0],
-                      [-1/3,-1/3,0],
-                      [-2/3,-2/3,0]
-                      ]) 
-vecs      = np.array([
                       [ 2/3,-1/3,0],
                       [ 1/2,   0,0],
                       [   0,   0,0],
                       [-2/3, 1/3,0]
                       ])
 npoints   = 100
-vecs = np.array([[+5/3,-1/3,0],[+4/3,-2/3,0],[0,0,0]])
 K_space = k_space(ktype,kbasis,vecs,bra_vec,npoints)
-vecs = np.array([[0,0,0],[3,0,0],[0,3,0]])
-ktype="plane"
-kbasis="car"
+#vecs = np.array([[0,0,0],[3,0,0],[0,3,0]])
+#ktype="plane"
+#kbasis="car"
 K_space = k_space(ktype,kbasis,vecs,bra_vec,npoints)
 
 #### Defining operators
 
 op_types  =["S","L","J"]
-op_types_k=["BC","BC_spin","BC_mag","Orb_SOC_inv"]
-
+op_types_k=["BC","BC_S","BC_mag","Orb_SOC_inv"]
+#op_types_k = ["E_triang"]
 
 #### Running calculation
 
@@ -61,6 +53,6 @@ op_types_k=["BC","BC_spin","BC_mag","Orb_SOC_inv"]
 Observables = observables(Ham,K_space,op_types,op_types_k)
 
 # Calculating observables
-Observables.calculate_ops(all_k=True) 
+Observables.calculate_ops() 
 
 
