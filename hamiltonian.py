@@ -149,7 +149,7 @@ class hamiltonian:
 #           del_hk_out = 1j* np.einsum("ij,ikl,i->jkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3],optimize=False)
 #       elif k_red.ndim == 2:
 #       del_hk_out = 1j* np.einsum("ij,ikl,ai->ajkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)#self.del_hk_path)
-        del_hk_out = 1j* np.einsum("Rc,Rmn,...R->...jmn",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("Rb,...b",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
+        del_hk_out = 1j* np.einsum("Rc,Rmn,...R->...cmn",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("Rb,...b",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
         return del_hk_out
 
 
@@ -159,14 +159,11 @@ class hamiltonian:
 
     def hk_spinless(self,k_red):
         '''Performs Fouriert-transform at given point in reduced coordinates.'''
-        #hk_out = np.sum(self.hr_spinless[:,:,:] * (np.exp(1j*2*np.pi*np.sum(self.R[:,:3]*k_red[:],axis=1))/self.R[:,3])[:,None,None], axis=0)
         if type(self.hr_spinless) != np.ndarray:
            self.set_hr_spinless()
-        if k_red.ndim == 1:
-            hk_out = np.einsum("ikl,i",self.hr_spinless, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3])
-        elif k_red.ndim == 2:
-            hk_out = np.einsum("ikl,ai->akl",self.hr_spinless, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=self.hk_path)
+        hk_out = np.einsum("Rmn,...R->...mn",self.hr_spinless, np.exp(1j*2*np.pi*np.einsum("Rb,...b->...R",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
         return hk_out
+
 
     def make_spinfull(self):
         '''Creates a spin-full Hamiltonian, by introducing the spin degrees of freedom,

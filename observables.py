@@ -62,28 +62,20 @@ class observables:
         Calls operator class, initializes array containing the expectation values.
         '''
         for op_type in self.op_types:
-            self.ops[op_type].initialize_val(np.shape(self.k_space.k_space_red)[0])
+            self.ops[op_type].initialize_val(np.shape(self.k_space.k_space_red)[:-1])
 
         for op_type_k in self.op_types_k:
-            self.ops[op_type_k].initialize_val_k(np.shape(self.k_space.k_space_red)[0])
+            self.ops[op_type_k].initialize_val_k(np.shape(self.k_space.k_space_red)[:-1])
 
     def calculate_ops(self,write=True,all_k=True,post=True):
         '''Calls H_R Fouriertransform, diagonalizes H_k, calculates Expectation values.'''
 
         self.initialize_op_val()
         print("Calculating operators on the given k-space...")
-        def expval_old(evecs,op):
-            '''Calculates <Psi|Op|Psi> along all dimensions of the operator.'''
-           #val = np.einsum('...ii->...i',np.einsum('...ji,...jk->...ik',np.conj(evecs[None,:,:]),np.einsum('...ij,...jk->...ik',op,evecs[None,:,:]))).real
-            val = np.einsum('df,cde,ef->cf',np.conj(evecs),op,evecs,optimize=True).real
-            return val
 
         def expval(evecs,op):
             '''Calculates <Psi|Op|Psi> along all dimensions of the operator on all k-points.'''
-           #val = np.einsum('...ii->...i',np.einsum('...ji,...jk->...ik',np.conj(evecs[:,None,:,:]),np.einsum('...ij,...jk->...ik',op,evecs[:,None,:,:]))).real
-           #path = np.einsum_path('kdf,cde,kef->kcf',np.conj(np.array([evecs[0]])),op,np.array([evecs[0]]),optimize='optimal')[0]
-           #val = np.einsum('kdf,cde,kef->kcf',np.conj(evecs),op,evecs,optimize=path).real
-            val = np.einsum('kdf,cde,kef->kcf',np.conj(evecs),op,evecs,optimize=True).real
+            val = np.einsum('...df,cde,...ef->...cf',np.conj(evecs),op,evecs,optimize=True).real
             return val
 
         self.evals = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands))
@@ -181,7 +173,8 @@ class observables:
         '''Calculates k-integrated expecation values.'''
         for op_type in self.op_types+self.op_types_k:
             print("Calculating k-integrated values of "+op_type+".")
-            self.ops[op_type].k_int(self.evals,sigma=0.05,wstep=0.001)
+            self.ops[op_type].k_int(self.evals,sigma,wstep)
+            
 
         if write==True:
            self.write_k_int()
@@ -453,10 +446,26 @@ if __name__== "__main__":
     o_plane_all_k.post_ops()
     o_plane_all_k.write_ops()
     for myops in op_types+op_types_k:
-        if np.allclose(o_plane.ops[myops].val,o_plane_all_k.ops[myops].val) == True:
+        if np.allclose(o_plane.ops[myops].val,o_plane_all_k.ops[myops].val,atol=1e-05) == True:
             print("Expectation value of operator "+myops+" is identical.")
         else:
             print("Expectation value of operator "+myops+" is not identical!!!")
-            print(np.amax(o_plane.ops[myops].val-o_plane_all_k.ops[myops].val))
+        print(np.amax(np.abs((o_plane.ops[myops].val-o_plane_all_k.ops[myops].val))))
 
-
+    print("Testing calculation for higher dimensional k-arrays")
+    k1=np.random.rand(9,7,4,3)
+    k2=k1.reshape((9,7,4,3))
+    k_flat = k_space('self-defined','red',k2,real_vec)
+    k_high = k_space('self-defined','red',k1,real_vec)
+    o_flat =  observables(my_ham,k_flat,op_types,op_types_k)
+    o_flat.k_space.k_space_red = k2
+    o_high =  observables(my_ham,k_high,op_types,op_types_k)
+    o_flat.calculate_ops(write=False)
+    o_high.calculate_ops(write=False)
+    for myops in op_types+op_types_k:
+        if np.allclose(o_flat.ops[myops].val,o_high.ops[myops].val.reshape((9,7,4,o_high.ops[myops].val.shape[3],8)),atol=1e-02,equal_nan=True) == True:
+            print("Expectation value of operator "+myops+" is identical.")
+        else:
+            print("Expectation value of operator "+myops+" is not identical!!!")
+        print(np.amax(np.abs((o_flat.ops[myops].val-o_high.ops[myops].val.reshape((9,7,4,o_high.ops[myops].val.shape[3],8))))))    
+   
