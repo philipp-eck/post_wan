@@ -542,7 +542,7 @@ class operator:
         if np.dot(self.ham.bra_vec[0],self.ham.bra_vec[1]) < 0:
            R = np.array([[[0,0,0],[1,0,0],[1,1,0]],   # 1.Euler point
                          [[0,0,0],[1,1,0],[0,1,0]]])   # 2.Euler point
-        elif np.dot(self.ham.bra_vec[0],self.ham.bra_vec[1]) < 0:
+        elif np.dot(self.ham.bra_vec[0],self.ham.bra_vec[1]) > 0:
            R = np.array([[[0,0,0],[1,0,0],[0,1,0]],   # 1.Euler point
                          [[1,0,0],[1,1,0],[0,1,0]]])   # 2.Euler point
            print("Not thoroughly tested for sharp angle Bravais lattice definition!!!")
@@ -615,8 +615,7 @@ class operator:
 
     def L_2(self,evals):
         '''Calculates L^2.'''
-        self.val[...,3] = (-1+np.sqrt(1+4*self.val[...,3]))/2
-
+        self.val[...,3,:] = (-1+np.sqrt(1+4*self.val[...,3,:]))/2.0
 
     def b_int_ef(self,evals):
         '''Performs band integration above all occupied bands'''
