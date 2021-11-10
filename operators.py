@@ -554,9 +554,11 @@ class operator:
         ### build up rotation matrix
         P = np.zeros((2,self.ham.n_bands,self.ham.n_bands)+np.shape(k)[:-1], dtype=np.csingle)
         def phase(lz,R,k):
-            out = (np.einsum('i,E...i', 
+            out = (np.einsum('i,Eki->Ek', 
                              np.exp(1j*2*np.pi*lz*phi),
-                             np.einsum("...j,Eij->E...i",k,R))).sum(axis=-1)/3.0
+                             np.exp(
+                             np.einsum("kj,Eij->Eki",
+                             1j*2*np.pi*k,R))))/3.0
             return out
 
         if self.ham.spin == False:
@@ -570,7 +572,6 @@ class operator:
             ind += 1
             for lz in range(1,j+1,1):
                p1 = phase(lz,R,k)
-               print(p1)
                P[:,ind  ,ind  ] = p1*(-1)**lz /np.sqrt(2)
                P[:,ind  ,ind+1] = p1*(-(-1)**lz) *1j /np.sqrt(2) ### follows from backtransform
                p2 = phase(-lz,R,k)
