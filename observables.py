@@ -5,7 +5,7 @@ from operators   import operator
 from hamiltonian import hamiltonian
 from k_space     import k_space
 import time
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 #Parallelization
 #from joblib import Parallel, delayed
@@ -324,7 +324,7 @@ class z2_wcc:
                 #    hk[k2] = self.ham.hk(k[k2])
                 
                 evals,evecs = np.linalg.eigh(self.ham.hk(k),UPLO="U")
-                M = np.zeros((self.ham.n_elec,self.ham.n_elec),dtype="np.csingle")+np.identity(self.ham.n_elec)
+                M = np.zeros((self.ham.n_elec,self.ham.n_elec),dtype=np.csingle)+np.identity(self.ham.n_elec)
                 for k2 in range(self.n_pump[1]-1):
                     M = np.einsum("ij,jk",M,np.einsum("ji,jk->ik",np.conj(evecs[k2,:,:self.ham.n_elec]),evecs[k2+1,:,:self.ham.n_elec]))
                 M = np.einsum("ij,jk",M,np.einsum("ji,jk->ik",np.conj(evecs[self.n_pump[1]-1,:,:self.ham.n_elec]),evecs[0,:,:self.ham.n_elec]))
