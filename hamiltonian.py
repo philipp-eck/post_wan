@@ -207,7 +207,6 @@ class hamiltonian:
         '''
         R_index = np.argwhere(np.all((self.R[:,:3]-R)==0, axis=1))
         H_R = self.hr[R_index][0,0]
-        print("Bravais weight: ",np.squeeze(self.R[R_index,3]),end="\n\n")
         if part == "complex":
             def print_H_R(i,j):
                 fs = "{:"+f+"}{:"+f+"} "
@@ -221,10 +220,12 @@ class hamiltonian:
                 fs = "{:"+f+"} "
                 print(fs.format(H_R[i,j].imag),end="")
 
-        for i in range(self.n_bands):
-            for j in range(self.n_bands):
-                print_H_R(i,j)
-            print("")
+        if part !=None:
+            print("Bravais weight: ",np.squeeze(self.R[R_index,3]),end="\n\n")
+            for i in range(self.n_bands):
+                for j in range(self.n_bands):
+                    print_H_R(i,j)
+                print("")
         return H_R
 
     def mod_H_R(self,R,mat):
