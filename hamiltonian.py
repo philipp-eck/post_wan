@@ -1,30 +1,33 @@
 #! /bin/python
-### Hamiltonian class, reads the WANNIER90 H(R)
+# Hamiltonian class, reads the WANNIER90 H(R)
 
 import numpy as np
 from k_space import k_space
 import time
 
-#Parallelization
+# Parallelization
 parallel = False
-if parallel == True:
-   while True:
-      try:
-          from joblib import Parallel, delayed
-      except ModuleNotFoundError:
-          print("module 'joblib' is not installed")
-          break
-      try:
-         import multiprocessing
-         num_cores = multiprocessing.cpu_count()
-         parallel = True
-         break
-      except ModuleNotFoundError:
-         print("module 'multiprocessing' is not installed")
-         break
- 
+if parallel:
+    while True:
+        try:
+            from joblib import Parallel, delayed
+        except ModuleNotFoundError:
+            print("module 'joblib' is not installed")
+            break
+        try:
+            import multiprocessing
+            num_cores = multiprocessing.cpu_count()
+            parallel = True
+            break
+        except ModuleNotFoundError:
+            print("module 'multiprocessing' is not installed")
+            break
+
+
 class hamiltonian:
-    ''' Hamiltonian class, reads the WANNIER90 H(R), the real space vectors and creates reciprocal vectors.
+    '''
+        Hamiltonian class, reads the WANNIER90 H(R), the real space vectors and
+        creates reciprocal vectors.
         Instance attributes:
         hr_file     # Filename of the input wannier90_hr.dat
         spin        # Boolean, if True, the Hamiltonian is spin-full
@@ -44,12 +47,13 @@ class hamiltonian:
         del_hk_path # variable storing the best path for contraction the del_hk derivative, calculated at the gamma point
     '''
 
-    def __init__(self,HR_FILE,BRA_VEC=None,SPIN=False,BASIS=None,EF=None,N_ELEC=None):
+    def __init__(self, HR_FILE, BRA_VEC=None, SPIN=False,
+                 BASIS=None, EF=None, N_ELEC=None):
         '''Initializes the Hamiltonian class.'''
         self.hr_file = HR_FILE
         self.spin    = SPIN
         if type(BASIS) == np.ndarray:
-            self.basis   = np.array(BASIS,dtype="int32")
+            self.basis = np.array(BASIS, dtype="int32")
         else:
             self.basis = None
         self.ef      = EF
@@ -62,121 +66,145 @@ class hamiltonian:
         self.hk_path     = np.einsum_path("ikl,ai->akl",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],np.array([[0,0,0]])))/self.R[:,3], optimize='optimal')[0]
         self.del_hk_path = np.einsum_path("ij,ikl,ai->ajkl",self.R[:,:3],self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],np.array([[0,0,0]])))/self.R[:,3], optimize='optimal')[0]
 
-    def read_HR(self,HR_file):
-        '''Reads the wannier90_hr.dat and the R vectors, sets n_bands and n_orb.
+    def read_HR(self, HR_file):
+        '''Reads the wannier90_hr.dat and the R vectors,
+           sets n_bands and n_orb.
         '''
         print("Reading Hamiltonian...")
         hr_file = open(HR_file, "r")
         hr_file.readline()
         line = hr_file.readline()
         self.n_bands = int(line)                     # Number of bands
-        if self.spin == True:
-           self.n_orb = self.n_bands//2
+        if self.spin:
+            self.n_orb = self.n_bands//2
         else:
-           self.n_orb = self.n_bands
+            self.n_orb = self.n_bands
         line = hr_file.readline()
         nR = int(line)                     # Number of R-vectors
         sk = (nR-1) % 15
         skipline = int((nR-sk)/15 + 1)
 
-        #### Read the weights in the header of the hamiltonian
-        
+        # Read the weights in the header of the hamiltonian
+
         weight = np.array([])
         for i in range(skipline):
-           line=hr_file.readline().split()
-           weight=np.append(weight,line)
-        weights = weight.astype(np.int)
+            line   = hr_file.readline().split()
+            weight = np.append(weight, line)
+        weights = weight.astype(np.int32)
 
-        #### Read full H(R) information
+        # Read full H(R) information
         time0 = time.time()
-        hr_full = np.loadtxt(HR_file,skiprows=3+skipline)
-        print("Time for reading hr-file: ",time.time()-time0)
-        hr_full = np.reshape(hr_full,(nR,self.n_bands,self.n_bands,7))
+        hr_full = np.loadtxt(HR_file, skiprows=3+skipline)
+        print("Time for reading hr-file: ", time.time()-time0)
+        hr_full = np.reshape(hr_full, (nR, self.n_bands, self.n_bands, 7))
         hr_file.close()
 
-        #### Build H(R)
+        # Build H(R)
         hr = np.array(hr_full[:,:,:,5] + 1j * hr_full[:,:,:,6])
-        # is this transpose correct? Yes, since it reproduces the DFT spin-texture correctly!!! This might not be considererd in wannier tools!!! 
+        # is this transpose correct? Yes, since it reproduces the DFT 
+        # spin-texture correctly!!! This might not be considererd in wannier tools!!! 
         self.hr = np.transpose(hr,axes=(0,2,1))
 
-        #### Create R-vector array, last entry contains the weights
+        # Create R-vector array, last entry contains the weights
         R = np.zeros((nR,4))
         R[:,0:3] = hr_full[:,0,0,0:3]
         R[:,3]   = weights
         self.R   = R.astype(int)
 
-        #### Print summary
+        # Print summary
         print("Hamiltonian from file "+HR_file+" successfully loaded.")
-        if self.spin == True:
-            print("H(R) is spin-full and contains "+str(nR)+" R-vectors and "+str(self.n_orb)+" orbitals.")
+        if self.spin:
+            print('H(R) is spin-full and contains '+str(nR)
+                  + ' R-vectors and '+str(self.n_orb)+' orbitals.')
         else:
-            print("H(R) is spin-less and contains "+str(nR)+" R-vectors and "+str(self.n_orb)+" orbitals.")
-
+            print("H(R) is spin-less and contains "+str(nR)
+                  + " R-vectors and "+str(self.n_orb)+" orbitals.")
 
     def set_lattice_vec(self,bra_vec):
         '''Checks if the defined Bravais vectors are complete
            Doesn't check if vectors span R3... '''
         if np.shape(bra_vec) == (3,3):
             self.bra_vec = bra_vec
-            self.R_cart = np.einsum("...ij,...i",self.bra_vec[None],self.R[:,0:3])
+            self.R_cart = np.einsum("ij,...i",self.bra_vec,self.R[:,0:3])
         else:
             print("Bravais vectors have the wrong shape or are not defined!!!")
 
-
     def hk(self,k_red):
-        '''Performs Fouriert-transform at given point in reduced coordinates. Expects k_red.dim=2.
         '''
-        hk_out = np.einsum("Rmn,...R->...mn",self.hr, np.exp(1j*2*np.pi*np.einsum("Rb,...b->...R",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
+           Performs Fouriert-transform at given point in reduced coordinates.
+           Expects k_red.dim=2.
+        '''
+        hk_out = np.einsum("Rmn,...R->...mn",
+                           self.hr,
+                           np.exp(1j*2*np.pi
+                                  *np.einsum("Rb,...b->...R",
+                                             self.R[:,:3],
+                                             k_red))/self.R[:,3],
+                           optimize=True)
         return hk_out
 
     def hk_parallel(self,k_red):
         '''Performs FT k-parallelized. Currently not used!!!
         '''
-        hk_out = np.zeros((np.shape(k_red)[0],self.n_bands,self.n_bands),dtype="np.csingle")
+        hk_out = np.zeros((np.shape(k_red)[0],self.n_bands,self.n_bands),
+                          dtype="np.csingle")
 
         def hk_k(i_k):
-            hk_out[i_k] = np.einsum("ikl,i",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red[i_k]))/self.R[:,3])
+            hk_out[i_k] = np.einsum("ikl,i",
+                                    self.hr,
+                                    np.exp(1j*2*np.pi
+                                           *np.einsum("ib,b",
+                                                      self.R[:,:3],
+                                                      k_red[i_k]))/self.R[:,3])
         
-        Parallel(num_cores,prefer="threads",require='sharedmem')(delayed(hk_k)(i_k) for i_k in range(np.shape(k_red)[0]))
+        Parallel(num_cores,prefer="threads",require='sharedmem')(
+                 delayed(hk_k)(i_k) for i_k in range(np.shape(k_red)[0]))
         return hk_out
-
 
     def del_hk(self,k_red):
         '''Returns nabla_k H_k in cartesian coordinates. Expects k_red.dim=2.
            Remove out-commented part if testet sufficiently.
         '''
-#       if k_red.ndim == 1:
-#           del_hk_out = 1j* np.einsum("ij,ikl,i->jkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,b",self.R[:,:3],k_red))/self.R[:,3],optimize=False)
-#       elif k_red.ndim == 2:
-#       del_hk_out = 1j* np.einsum("ij,ikl,ai->ajkl",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],k_red))/self.R[:,3],optimize=True)#self.del_hk_path)
-        del_hk_out = 1j* np.einsum("Rc,Rmn,...R->...cmn",self.R_cart,self.hr, np.exp(1j*2*np.pi*np.einsum("Rb,...b",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
+        del_hk_out = 1j*np.einsum("Rc,Rmn,...R->...cmn",
+                                  self.R_cart,
+                                  self.hr,
+                                  np.exp(1j*2*np.pi*np.einsum("Rb,...b",
+                                                              self.R[:,:3],
+                                                              k_red))/self.R[:,3],
+                                  optimize=True)
         return del_hk_out
 
-
     def set_hr_spinless(self):
-        '''Averages spin-blocks to obtain a spin-less Hamiltonian without SOC interaction.'''
-        self.hr_spinless = (self.hr[:,:self.n_orb,:self.n_orb]+self.hr[:,self.n_orb:,self.n_orb:])/2.0
+        '''Averages spin-blocks to obtain a spin-less Hamiltonian
+           without SOC interaction.'''
+        self.hr_spinless = (self.hr[:,:self.n_orb,:self.n_orb]
+                            +self.hr[:,self.n_orb:,self.n_orb:])/2.0
 
     def hk_spinless(self,k_red):
-        '''Performs Fouriert-transform at given point in reduced coordinates.'''
+        '''Performs Fouriert-transform at given point in reduced coordinates.
+        '''
         if type(self.hr_spinless) != np.ndarray:
-           self.set_hr_spinless()
-        hk_out = np.einsum("Rmn,...R->...mn",self.hr_spinless, np.exp(1j*2*np.pi*np.einsum("Rb,...b->...R",self.R[:,:3],k_red))/self.R[:,3],optimize=True)
+            self.set_hr_spinless()
+        hk_out = np.einsum("Rmn,...R->...mn",
+                           self.hr_spinless,
+                           np.exp(1j*2*np.pi*np.einsum("Rb,...b->...R",
+                                                       self.R[:,:3],k_red))/self.R[:,3],
+                           optimize=True)
         return hk_out
-
 
     def make_spinfull(self):
         '''Creates a spin-full Hamiltonian, by introducing the spin degrees of freedom,
            e.g. to add SOC by hand.
         '''
 
-        if self.spin == True:
+        if self.spin:
             print("Hamiltonian is already spin-full...")
         else:
-           self.hr = np.kron(np.eye(2),self.hr)
-           self.spin = True
-           self.n_bands *= 2
-           print("Hamiltonian is now spin-full, contains "+str(self.n_bands)+" bands.")
+            self.hr = np.kron(np.eye(2),self.hr)
+            self.spin = True
+            self.n_bands *= 2
+            print("Hamiltonian is now spin-full, contains "
+                  +str(self.n_bands)+" bands.")
 
     def w2dynamics_hk(self,grid,filename):
         '''Performs Fourier transformation on a Gamma-centered Monkhorst grid
@@ -193,10 +221,10 @@ class hamiltonian:
         # Run FT
         hk = self.hk(mh_grid.k_space_red)
         output = open(filename+".dat","w")
-        #write header
-        output.write("{:9d}{:9d}{:9d}\n".format(np.shape(mh_grid.k_space_red)[0],self.n_bands,self.n_bands))
+        # Write header
+        output.write("{:9d}{:9d}{:9d}\n".format(np.shape(mh_grid.k_space_red)[0],
+                                                self.n_bands,self.n_bands))
         for i_k in range(np.shape(mh_grid.k_space_red)[0]):
-           #hk = self.hk(mh_grid.k_space_red[i_k])
             write_Hk(mh_grid.k_space_red[i_k],hk[i_k])
 
         output.close()
@@ -205,7 +233,7 @@ class hamiltonian:
         '''Returns H(R) for given R.
            part = {"complex","real","imag"}
         '''
-        R_index = np.argwhere(np.all((self.R[:,:3]-R)==0, axis=1))
+        R_index = np.argwhere(np.all((self.R[:,:3]-R)==0,axis=1))
         H_R = self.hr[R_index][0,0]
         if part == "complex":
             def print_H_R(i,j):
@@ -220,7 +248,7 @@ class hamiltonian:
                 fs = "{:"+f+"} "
                 print(fs.format(H_R[i,j].imag),end="")
 
-        if part !=None:
+        if part is not None:
             print("Bravais weight: ",np.squeeze(self.R[R_index,3]),end="\n\n")
             for i in range(self.n_bands):
                 for j in range(self.n_bands):
@@ -234,18 +262,17 @@ class hamiltonian:
         R_index = np.argwhere(np.all((self.R[:,:3]-R)==0, axis=1))
         self.hr[R_index[0,0]] += mat
 
-
     def calc_ef(self,vecs=np.array([[9,9,9]])):
         '''Calculates and sets the Fermi level.
         '''
-        if self.n_elec == None:
+        if self.n_elec is None:
             print('"n_elec" not set, Fermi level is not calculated!!!')
         else:
             mh_grid = k_space("monkhorst","red",vecs,self.bra_vec)
             evals = np.linalg.eigvalsh(self.hk(mh_grid.k_space_red))
             nk_occ = np.prod(vecs)
 
-            if self.spin == False:
+            if self.spin is False:
                 n_occ = int(nk_occ*self.n_elec/2.0)
             else:
                 n_occ = int(nk_occ*self.n_elec)
@@ -257,14 +284,15 @@ class hamiltonian:
 
 if __name__== "__main__":
     print("Testing class hamiltonian...")
-    real_vec = np.array([[3.0730000,    0.0000000,    0.0000000],[-1.5365000,    2.6612960,    0.0000000],[0.0000000,    0.0000000,   20.0000000]])
+    real_vec = np.array([[3.0730000, 0.0000000, 0.0000000],
+                         [-1.5365000,2.6612960, 0.0000000],
+                         [0.0000000, 0.0000000, 20.0000000]])
     my_ham = hamiltonian("test_ham/TaAs.dat",real_vec,True)
     print("Instance attributes of the generated Hamiltonian")
     print(my_ham.__dict__.keys())
     print('Testing function "get_H_R".')
     R = np.array([0,0,0])
     my_ham.get_H_R(R)
-
 
     print('''Testing function "mod_H_R"''')
     mat = np.eye(my_ham.n_bands)
@@ -313,7 +341,8 @@ if __name__== "__main__":
     print("Testing single and all k-point del_h_k")
     time0s = time.time()
     k = np.random.rand(1000,3)
-    del_hk_single = np.zeros((1000,3,my_ham.n_bands,my_ham.n_bands),dtype="complex")
+    del_hk_single = np.zeros((1000,3,my_ham.n_bands,my_ham.n_bands),
+                             dtype="complex")
     for i in range(1000):
         del_hk_single[i] = my_ham.del_hk(np.array([k[i]]))
     print("Time for single hk:", time.time()-time0s)
