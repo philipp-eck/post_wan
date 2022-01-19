@@ -76,7 +76,7 @@ class observables:
         for op_type_k in self.op_types_k:
             self.ops[op_type_k].initialize_val_k(np.shape(self.k_space.k_space_red)[:-1])
 
-    def calculate_ops(self,write=True,all_k=True,post=True):
+    def calculate_ops(self,write=True,all_k=True,post=True,bmin=False,bmax=False):
         '''Calls H_R Fouriertransform, diagonalizes H_k, calculates Expectation values.'''
 
         self.initialize_op_val()
@@ -176,7 +176,7 @@ class observables:
             self.post_ops()
         # Write observables
         if write == True:
-            self.write_ops()
+            self.write_ops(bmin,bmax)
 
     def post_ops(self):
         '''If defined, run the post-processing for the operators.'''
@@ -209,18 +209,22 @@ class observables:
         else:
             print('''Pontryagin index cannot be calculated, set k_type="sphere_ster_proj" !!!''')
 
-    def write_ops(self):
+    def write_ops(self,bmin=False,bmax=False):
         '''Writes calculated observables to output files.'''
 
+        if not bmin:
+            bmin = 1
+        if not bmax:
+            bmax = self.ham.n_bands + 1
         # Write only k-coordinates and eigenvalues
         print("Writing eigenvalues output.")
         if self.k_space.k_kind == "path":
             f_path = '{:4d}{:13.8f}{:13.8f}'
             f_spec = f_path+' \n'
             output = open(self.prefix+"evals_path.dat", "w")
-            for band in range(self.ham.n_bands):
+            for band in range(bmin,bmax):
                 for i_k in range(np.shape(self.k_space.k_space_red)[0]):
-                    output.write(f_spec.format(band+1,self.k_space.k_dist[i_k],self.evals[i_k,band]))
+                    output.write(f_spec.format(band,self.k_space.k_dist[i_k],self.evals[i_k,band-1]))
                 output.write("\n")
             output.close()
 
@@ -228,9 +232,9 @@ class observables:
             f_map = '{:4d}{k[0]:13.8f}{k[1]:13.8f}{k[2]:13.8f}{e:13.8f}'
             f_spec = f_map+' \n'
             output = open(self.prefix+"evals_map.dat", "w")
-            for band in range(self.ham.n_bands):
+            for band in range(bmin,bmax):
                 for i_k in range(np.shape(self.k_space.k_space_red)[0]):
-                    output.write(f_spec.format(band+1,k=self.k_space.k_space_car[i_k],e=self.evals[i_k,band]))
+                    output.write(f_spec.format(band,k=self.k_space.k_space_car[i_k],e=self.evals[i_k,band-1]))
                     if (i_k+1)%np.sqrt(np.shape(self.k_space.k_space_red)[0]) ==0:
                        output.write("\n")
                 output.write("\n")
@@ -244,9 +248,9 @@ class observables:
                 f_path = '{:4d}{:13.8f}{:13.8f}'
                 f_spec = f_path+self.ops[op_type].f_spec+' \n'
                 output = open(self.prefix+op_type+"_path.dat", "w")
-                for band in range(self.ham.n_bands):
+                for band in range(bmin,bmax):
                     for i_k in range(np.shape(self.k_space.k_space_red)[0]):
-                        output.write(f_spec.format(band+1,self.k_space.k_dist[i_k],self.evals[i_k,band],d=self.ops[op_type].val[i_k,:,band]))
+                        output.write(f_spec.format(band,self.k_space.k_dist[i_k],self.evals[i_k,band],d=self.ops[op_type].val[i_k,:,band+1]))
                     output.write("\n")
                 output.close()
 
