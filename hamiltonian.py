@@ -94,7 +94,7 @@ class hamiltonian:
 
         # Read full H(R) information
         time0 = time.time()
-        hr_full = np.loadtxt(HR_file, skiprows=3+skipline)
+        hr_full = np.loadtxt(HR_file,dtype=np.single,skiprows=3+skipline)
         print("Time for reading hr-file: ", time.time()-time0)
         hr_full = np.reshape(hr_full, (nR, self.n_bands, self.n_bands, 7))
         hr_file.close()
@@ -139,8 +139,12 @@ class hamiltonian:
                            np.exp(1j*2*np.pi
                                   *np.einsum("Rb,...b->...R",
                                              self.R[:,:3],
-                                             k_red))/self.R[:,3],
+                                             k_red,
+                                             optimize=True)
+                                 )/self.R[:,3],
+                           dtype=np.csingle,
                            optimize=True)
+#       hk_out.dtype = np.csingle #Enforce csingle precission
         return hk_out
 
     def hk_parallel(self,k_red):
