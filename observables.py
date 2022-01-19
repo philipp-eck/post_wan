@@ -5,14 +5,25 @@ from operators   import operator
 from hamiltonian import hamiltonian
 from k_space     import k_space
 import time
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
-#Parallelization
-#from joblib import Parallel, delayed
-#import multiprocessing
-
-#num_cores = multiprocessing.cpu_count()
-
+# Parallelization
+parallel = True
+if parallel:
+    while True:
+        try:
+            from joblib import Parallel, delayed
+        except ModuleNotFoundError:
+            print("module 'joblib' is not installed")
+            break
+        try:
+            import multiprocessing
+            num_cores = multiprocessing.cpu_count()
+            parallel = True
+            break
+        except ModuleNotFoundError:
+            print("module 'multiprocessing' is not installed")
+            break
 
 
 class observables:
@@ -50,12 +61,10 @@ class observables:
         for op_type in self.op_types:
             print("Initializing k-independent operator "+op_type+".")
             self.ops[op_type]     = operator(op_type,self.ham)
-#           self.ops[op_type].initialize_val(np.shape(self.k_space.k_space_red)[0])
 
         for op_type_k in self.op_types_k:
             print("Inititalizing k-dependent operator "+op_type_k+".")
             self.ops[op_type_k]     = operator(op_type_k,self.ham)
-#           self.ops[op_type_k].initialize_val_k(np.shape(self.k_space.k_space_red)[0])
 
     def initialize_op_val(self):
         '''
@@ -77,21 +86,23 @@ class observables:
             '''Calculates <Psi|Op|Psi> along all dimensions of the operator on all k-points.'''
             val = np.einsum('...df,cde,...ef->...cf',np.conj(evecs),op,evecs,optimize=True).real
             return val
+        shape_eval = self.k_space.k_space_red.shape[:-1] + (self.ham.n_bands,)
+        shape_evec = self.k_space.k_space_red.shape[:-1] + (self.ham.n_bands,self.ham.n_bands)
+        self.evals = np.zeros(shape_eval)
+        self.evecs = np.zeros(shape_evec,dtype=np.csingle)
 
-        self.evals = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands))
-        self.evecs = np.zeros((np.shape(self.k_space.k_space_red)[0],self.ham.n_bands,self.ham.n_bands),dtype=np.csingle)
-        def calc_k(i_k,k_i):
+        def calc_k(i_k):
             '''Calls expval() for each operator on a single k-point.
                Transforms k_i.dim=1 to k_i.dim=2 for using the all k-point routines.'''
-            hk = self.ham.hk(k_i)
+            hk = self.ham.hk(self.k_space.k_space_red[i_k])
             evals,evecs = np.linalg.eigh(hk,UPLO="U")
             self.evals[i_k], self.evecs[i_k] = evals, evecs
     
             for op_type in self.op_types:
-                self.ops[op_type].val[i_k] = expval(evecs,self.ops[op_type].op)[0]
+                self.ops[op_type].val[i_k] = expval(evecs,self.ops[op_type].op)#[0]
     
             for op_type_k in self.op_types_k:
-                    self.ops[op_type_k].val[i_k] = self.ops[op_type_k].expval(k_i,evals,evecs)[0]
+                    self.ops[op_type_k].val[i_k] = self.ops[op_type_k].expval(self.k_space.k_space_red[i_k],evals,evecs)#[0]
 
     
         def calc_serial():
@@ -100,8 +111,8 @@ class observables:
             print("Progress: ["+str_prog+"]", end="\r", flush=True)
             nk = np.shape(self.k_space.k_space_red)[0]
             for i_k,k_i in enumerate(self.k_space.k_space_red):
-                k_i = np.array([k_i])
-                calc_k(i_k,k_i)
+               #k_i = np.array([k_i])
+                calc_k(i_k)
                 if i_k >= n_prog *nk/10.0:
                     str_prog = ""
                     for i_prog in range(10):
@@ -117,6 +128,11 @@ class observables:
 
         def calc_parallel():
             Parallel(num_cores,prefer="threads",require='sharedmem')(delayed(calc_k)(i_k) for i_k in range(np.shape(self.k_space.k_space_red)[0]))
+
+        def calc_parallel_new():
+            pool = multiprocessing.Pool(processes=num_cores)
+            pool.map(calc_k,range(10))
+
 
         def calc_all_k():
             '''
@@ -453,18 +469,26 @@ if __name__== "__main__":
 
     print("Testing calculation for higher dimensional k-arrays")
     k1=np.random.rand(9,7,4,3)
-    k2=k1.reshape((9,7,4,3))
+    k2=k1.reshape((9*7*4,3))
     k_flat = k_space('self-defined','red',k2,real_vec)
     k_high = k_space('self-defined','red',k1,real_vec)
     o_flat =  observables(my_ham,k_flat,op_types,op_types_k)
     o_flat.k_space.k_space_red = k2
     o_high =  observables(my_ham,k_high,op_types,op_types_k)
-    o_flat.calculate_ops(write=False)
-    o_high.calculate_ops(write=False)
+    ALL_K = False
+    o_flat.calculate_ops(write=False,all_k=ALL_K,post=True)
+    o_high.calculate_ops(write=False,all_k=ALL_K,post=True)
+  
+    print("Eigenvalues are identical?:",
+          np.allclose(o_flat.evals.flatten(),o_high.evals.flatten()))
+    print("Eigenvectors are identical?:",
+          np.allclose(o_flat.evecs.flatten(),o_high.evecs.flatten()))
     for myops in op_types+op_types_k:
-        if np.allclose(o_flat.ops[myops].val,o_high.ops[myops].val.reshape((9,7,4,o_high.ops[myops].val.shape[3],8)),atol=1e-02,equal_nan=True) == True:
+        if np.allclose(o_flat.ops[myops].val.flatten(),
+                       o_high.ops[myops].val.flatten(),
+                       atol=1e-02,equal_nan=True) == True:
             print("Expectation value of operator "+myops+" is identical.")
         else:
             print("Expectation value of operator "+myops+" is not identical!!!")
-        print(np.amax(np.abs((o_flat.ops[myops].val-o_high.ops[myops].val.reshape((9,7,4,o_high.ops[myops].val.shape[3],8))))))    
+        print("Max deviation:",np.amax(np.abs((o_flat.ops[myops].val.flatten()-o_high.ops[myops].val.flatten()))))    
    
