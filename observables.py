@@ -250,7 +250,7 @@ class observables:
                 output = open(self.prefix+op_type+"_path.dat", "w")
                 for band in range(bmin,bmax):
                     for i_k in range(np.shape(self.k_space.k_space_red)[0]):
-                        output.write(f_spec.format(band,self.k_space.k_dist[i_k],self.evals[i_k,band],d=self.ops[op_type].val[i_k,:,band+1]))
+                        output.write(f_spec.format(band,self.k_space.k_dist[i_k],self.evals[i_k,band-1],d=self.ops[op_type].val[i_k,:,band-1]))
                     output.write("\n")
                 output.close()
 
