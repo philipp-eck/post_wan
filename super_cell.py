@@ -5,7 +5,7 @@ import numpy as np
 from hamiltonian import hamiltonian
 from copy import deepcopy
 import time
-class super_cell:
+class super_cell(hamiltonian):
     ''' super-cellclass, builds up a super cell from a given "primitive" Wannier Hamiltonian.
         Instance attributes:
         bulk_ham    # Python hamiltonian class, bulk Hamiltonian input
@@ -121,19 +121,6 @@ class super_cell:
                 for s1 in range(2):
                     for s2 in range(2):
                         self.hr[r,s1*O:(s1+1)*O,s2*O:(s2+1)*O]+=np.kron(d12,self.bulk_ham.hr[r,s1*o:(s1+1)*o,s2*o:(s2+1)*o])
-#       Following lines can be deleted if the new version is sufficiently tested
-#       t0 = time.time()
-#       for r,R in enumerate(self.R_frac):
-#           self.R[r,3] = self.bulk_ham.R[r,3]
-#           self.R[r,:3]= self.R_frac[r]
-#           for i,pos1 in enumerate(basis_red):
-#               for j,pos2 in enumerate(basis_red):
-#                   if np.allclose(np.mod(pos1+R+eps,1)-eps,pos2):
-#                       if self.pbc == None:
-#                           add_hr(self,r,i,j)
-#                       elif np.abs((pos1+R-pos2)[self.pbc])<0.001:
-#                           add_hr(self,r,i,j)
-#       print("Time for setting-up the super-cell H(R):", time.time()-t0)
         
         self.sup_basis = basis
 
@@ -167,27 +154,6 @@ class super_cell:
         R = np.around(np.einsum("ji,j",self.sup_vec,np.mod(np.einsum("ji,j",self.sup_vec_inv,np.array([R0,R1,R2]))+eps,1)-eps))#.astype(int)
         return R
 
-    def hk(self,k_red):
-        '''Performs Fouriert-transform at given point in reduced coordinates.'''
-        hk = hamiltonian.hk(self,k_red)
-        print("Hamiltonian is hermitian?:",np.allclose(hk,np.conjugate(hk.transpose(0,2,1))))
-        return hk
-
-    def hk_spinless(self,k_red):
-        '''Performs Fouriert-transform at given point in reduced coordinates.'''
-        hk = hamiltonian.hk_spinless(self,k_red)
-        return hk
-
-
-    def del_hk(self,k_red):
-        '''Returns nabla_k H_k in cartesian coordinates.'''
-        del_hk = hamiltonian.del_hk(self,k_red)
-        return del_hk
-
-
-    def set_hr_spinless(self):
-        '''Averages spin-blocks to obtain a spin-less Hamiltonian without SOC interaction.'''
-        self.hr_spinless = (self.hr[:,:self.n_orb,:self.n_orb]+self.hr[:,self.n_orb:,self.n_orb:])/2.0
 
 
 
