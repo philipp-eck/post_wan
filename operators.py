@@ -346,7 +346,7 @@ class operator:
             op[0] = np.eye(op[0].shape[0]) # op[0]=1/2 identity matrix
             #### Calculate the anti-commutator
             del_hk = self.ham.del_hk(k)
-            v = 0.5*(np.einsum('slm,...cmn->...csln',op,del_hk) + np.einsum('kclm,smn->kcsln',del_hk,op))
+            v = 0.5*(np.einsum('slm,...cmn->...csln',op,del_hk) + np.einsum('...clm,smn->...csln',del_hk,op))
 ###            com_H = np.einsum("dij,Rjk->Rdik",op,self.ham.hr)-np.einsum("Rij,cjk->Rcik",self.ham.hr,op)
 ###            com_H[:,0] = self.ham.hr
 ###            v = 1j*np.einsum("Rc,Rdnm,Rk->kcdnm",self.ham.R_cart,com_H,
@@ -428,11 +428,11 @@ class operator:
 
         Em_En    = self.calc_Em_En(k,evals)
         m_del_n  = self.calc_vel(k,evecs,self.BC_type)
-        m_del_n /= Em_En[:,None,None]
+        m_del_n /= Em_En[...,None,None,:,:]
         m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
-        BC_op =-1*np.imag(np.einsum('...csmn,...cmn->...csn',np.roll(np.conj(m_del_n),-1,axis=-3),np.roll(m_del_n[:,:,0],-2,axis=-3),optimize=True)
-                         -np.einsum('...csmn,...cmn->...csn',np.roll(np.conj(m_del_n),-2,axis=-3),np.roll(m_del_n[:,:,0],-1,axis=-3),optimize=True))
-        BC_op = BC_op.reshape((k.shape[0],12,self.ham.n_bands))
+        BC_op =-1*np.imag(np.einsum('...csmn,...cmn->...csn',np.roll(np.conj(m_del_n),-1,axis=-4),np.roll(m_del_n[...,0,:,:],-2,axis=-3),optimize=True)
+                         -np.einsum('...csmn,...cmn->...csn',np.roll(np.conj(m_del_n),-2,axis=-4),np.roll(m_del_n[...,0,:,:],-1,axis=-3),optimize=True))
+        BC_op = BC_op.reshape(k.shape[:-1]+(12,self.ham.n_bands))
         return BC_op
 
     def BC_mag_expval(self,k=None,evals=None,evecs=None):
@@ -735,7 +735,7 @@ def commutator_L(op):
     print("Calculating commutator...")
     com = np.matmul(op[0],op[1])-np.matmul(op[1],op[0])-1j*op[2]
     print("Maximum value of cummutator:",np.amax(com))
-    if abs(np.amax(com))<=1e-10:
+    if abs(np.amax(com))<=1e-7:
         print("Commutator check passed!!!")
     else:
         print("Commutator check failed!!!")
@@ -769,6 +769,16 @@ if __name__== "__main__":
     print('Testing function "initialize_val_k" for k-dependent operators...')
     BC_op.initialize_val_k(kdim)
     print(np.shape(BC_op.val))
+    print("Testing BC and BC_S expectation values")
+#   k = np.array([[0.24,0.57,0],[1/3,1/3,0]])
+    k = np.random.rand(3,5,2,3)
+    evals,evecs = np.linalg.eigh(my_ham.hk(k))
+    BC_val = BC_op.expval(k,evals,evecs)
+    BC_S_op = operator("BC_S",my_ham)
+    BC_S_op.initialize_val_k(kdim)
+    BC_S_val = BC_S_op.expval(k,evals,evecs)
+    print("BC and BC of BC_S equal?:",np.allclose(BC_val[...,2,:],BC_S_val[...,8,:]))
+    print("Difference:",np.amax(np.abs(BC_val[...,2,:]-BC_S_val[...,8,:])))
     print('Testing a self-defined operator with one component input...')
     self_def_op = operator("self_def",my_ham)
     print('Define operator matrix by hand.')
