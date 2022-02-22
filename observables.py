@@ -214,14 +214,14 @@ class observables:
         if not bmin:
             bmin = 1
         if not bmax:
-            bmax = self.ham.n_bands + 1
+            bmax = self.ham.n_bands 
         # Write only k-coordinates and eigenvalues
         print("Writing eigenvalues output.")
         if self.k_space.k_kind == "path":
             f_path = '{:4d}{:13.8f}{:13.8f}'
             f_spec = f_path+' \n'
             output = open(self.prefix+"evals_path.dat", "w")
-            for band in range(bmin,bmax):
+            for band in range(bmin,bmax+1):
                 for i_k in range(np.shape(self.k_space.k_space_red)[0]):
                     output.write(f_spec.format(band,self.k_space.k_dist[i_k],self.evals[i_k,band-1]))
                 output.write("\n")
@@ -231,7 +231,7 @@ class observables:
             f_map = '{:4d}{k[0]:13.8f}{k[1]:13.8f}{k[2]:13.8f}{e:13.8f}'
             f_spec = f_map+' \n'
             output = open(self.prefix+"evals_map.dat", "w")
-            for band in range(bmin,bmax):
+            for band in range(bmin,bmax+1):
                 for i_k in range(np.shape(self.k_space.k_space_red)[0]):
                     output.write(f_spec.format(band,k=self.k_space.k_space_car[i_k],e=self.evals[i_k,band-1]))
                     if (i_k+1)%np.sqrt(np.shape(self.k_space.k_space_red)[0]) ==0:
@@ -247,7 +247,7 @@ class observables:
                 f_path = '{:4d}{:13.8f}{:13.8f}'
                 f_spec = f_path+self.ops[op_type].f_spec+' \n'
                 output = open(self.prefix+op_type+"_path.dat", "w")
-                for band in range(bmin,bmax):
+                for band in range(bmin,bmax+1):
                     for i_k in range(np.shape(self.k_space.k_space_red)[0]):
                         output.write(f_spec.format(band,self.k_space.k_dist[i_k],self.evals[i_k,band-1],d=self.ops[op_type].val[i_k,:,band-1]))
                     output.write("\n")
@@ -258,9 +258,9 @@ class observables:
                 f_map = '{:4d}{k[0]:13.8f}{k[1]:13.8f}{k[2]:13.8f}{e:13.8f}'
                 f_spec = f_map+self.ops[op_type].f_spec+' \n'
                 output = open(self.prefix+op_type+"_map.dat", "w")
-                for band in range(bmin,bmax):
+                for band in range(bmin,bmax+1):
                     for i_k in range(np.shape(self.k_space.k_space_red)[0]):
-                        output.write(f_spec.format(band,k=self.k_space.k_space_car[i_k],e=self.evals[i_k,band],d=self.ops[op_type].val[i_k,:,band-1]))
+                        output.write(f_spec.format(band,k=self.k_space.k_space_car[i_k],e=self.evals[i_k,band-1],d=self.ops[op_type].val[i_k,:,band-1]))
                         if (i_k+1)%np.sqrt(np.shape(self.k_space.k_space_red)[0]) ==0:
                            output.write("\n")
                     output.write("\n")
