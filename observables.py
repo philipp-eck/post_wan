@@ -1,9 +1,8 @@
 #! /bin/python
-### observables class, takes care of calculating the observables of the corresponding operators. 
 import numpy as np
-from operators   import operator
+from operators import operator
 from hamiltonian import hamiltonian
-from k_space     import k_space
+from k_space import k_space
 import time
 
 # Parallelization
@@ -26,20 +25,21 @@ if parallel:
 
 
 class observables:
-    ''' observables class, takes care of calculating the observables of the corresponding operators.
+    ''' observables class, takes care of calculating the observables
+        of the corresponding operators.
         When called, creates a dictionary with all operators.
         Generates output arrays and calculates the expectation value.
         Instance attributes:
         hamiltonian   # Hamiltonian
         k_space       # k_space on which the properties are calculated
         op_types      # List containing all operators to be calculated: {S,L,J}
-        op_types_k    # List containing all k-dependent operators to be calculated: {BC,BC_mag,Orb_SOC_inv,E_triang}
+        op_types_k    # List containing all k-dependent operators
+                      # to be calculated: {BC,BC_mag,Orb_SOC_inv,E_triang}
         ops           # Dictionary containing the operators
         evals         # Array containing all eigen-values
         evecs         # Array containing all eigen-vectors
         prefix        # String, prefix of output files
     '''
-       
 
     def __init__(self,HAMILTONIAN,K_SPACE,OP_TYPES=[],OP_TYPES_K=[],PREFIX=""):
         '''Initializes the observables object'''
@@ -50,12 +50,12 @@ class observables:
         self.op_types    = OP_TYPES
         self.op_types_k  = OP_TYPES_K
         self.ops         = {}
-     
+
         self.initialize_ops()
-    
 
     def initialize_ops(self):
-        '''Calls operator class, initializes all required attributes for calculating the exp val.
+        '''Calls operator class, initializes all required attributes
+           for calculating the expectation values.
         '''
         for op_type in self.op_types:
             print("Initializing k-independent operator "+op_type+".")
@@ -67,52 +67,64 @@ class observables:
 
     def initialize_op_val(self):
         '''
-        Calls operator class, initializes array containing the expectation values.
+        Calls operator class, initializes array
+        containing the expectation values.
         '''
         for op_type in self.op_types:
-            self.ops[op_type].initialize_val(np.shape(self.k_space.k_space_red)[:-1])
+            self.ops[op_type].initialize_val(
+                np.shape(self.k_space.k_space_red)[:-1])
 
         for op_type_k in self.op_types_k:
-            self.ops[op_type_k].initialize_val_k(np.shape(self.k_space.k_space_red)[:-1])
+            self.ops[op_type_k].initialize_val_k(
+                np.shape(self.k_space.k_space_red)[:-1])
 
-    def calculate_ops(self,write=True,all_k=True,post=True,bmin=False,bmax=False):
-        '''Calls H_R Fouriertransform, diagonalizes H_k, calculates Expectation values.'''
+    def calculate_ops(self,write=True,all_k=True,
+                      post=True,bmin=False,bmax=False):
+        '''Calls H_R Fouriertransform, diagonalizes H_k,
+           calculates Expectation values.
+        '''
 
         self.initialize_op_val()
         print("Calculating operators on the given k-space...")
 
         def expval(evecs,op):
-            '''Calculates <Psi|Op|Psi> along all dimensions of the operator on all k-points.'''
-            val = np.einsum('...df,cde,...ef->...cf',np.conj(evecs),op,evecs,optimize=True).real
+            '''Calculates <Psi|Op|Psi> along all dimensions
+               of the operator on all k-points.
+            '''
+            val = np.einsum('...df,cde,...ef->...cf',
+                            np.conj(evecs),op,evecs,optimize=True).real
             return val
         shape_eval = self.k_space.k_space_red.shape[:-1] + (self.ham.n_bands,)
-        shape_evec = self.k_space.k_space_red.shape[:-1] + (self.ham.n_bands,self.ham.n_bands)
+        shape_evec = self.k_space.k_space_red.shape[:-1] + (self.ham.n_bands,
+                                                            self.ham.n_bands)
         self.evals = np.zeros(shape_eval)
         self.evecs = np.zeros(shape_evec,dtype=np.csingle)
 
         def calc_k(i_k):
             '''Calls expval() for each operator on a single k-point.
-               Transforms k_i.dim=1 to k_i.dim=2 for using the all k-point routines.'''
+               Transforms k_i.dim=1 to k_i.dim=2 for using
+               the all k-point routines.
+            '''
             hk = self.ham.hk(self.k_space.k_space_red[i_k])
             evals,evecs = np.linalg.eigh(hk,UPLO="U")
             self.evals[i_k], self.evecs[i_k] = evals, evecs
-    
-            for op_type in self.op_types:
-                self.ops[op_type].val[i_k] = expval(evecs,self.ops[op_type].op)#[0]
-    
-            for op_type_k in self.op_types_k:
-                    self.ops[op_type_k].val[i_k] = self.ops[op_type_k].expval(self.k_space.k_space_red[i_k],evals,evecs)#[0]
 
-    
+            for op_type in self.op_types:
+                self.ops[op_type].val[i_k] = expval(evecs,self.ops[op_type].op)
+
+            for op_type_k in self.op_types_k:
+                self.ops[op_type_k].val[i_k] = self.ops[op_type_k].expval(
+                    self.k_space.k_space_red[i_k],evals,evecs)
+
         def calc_serial():
             str_prog = "          "
             n_prog   = 1
             print("Progress: ["+str_prog+"]", end="\r", flush=True)
             nk = np.shape(self.k_space.k_space_red)[0]
             for i_k,k_i in enumerate(self.k_space.k_space_red):
-               #k_i = np.array([k_i])
+                # k_i = np.array([k_i])
                 calc_k(i_k)
-                if i_k >= n_prog *nk/10.0:
+                if i_k >= n_prog * nk / 10.0:
                     str_prog = ""
                     for i_prog in range(10):
                         if i_prog < n_prog:
@@ -122,11 +134,11 @@ class observables:
                     print("Progress: ["+str_prog+"]", end="\r", flush=True)
                     n_prog += 1
             print("Progress: [==========]")
-                           
-
 
         def calc_parallel():
-            Parallel(num_cores,prefer="threads",require='sharedmem')(delayed(calc_k)(i_k) for i_k in range(np.shape(self.k_space.k_space_red)[0]))
+            Parallel(num_cores,prefer="threads",require='sharedmem')(
+                delayed(calc_k)(i_k) for i_k in range(
+                    np.shape(self.k_space.k_space_red)[0]))
 
         def calc_parallel_new():
             pool = multiprocessing.Pool(processes=num_cores)
@@ -148,13 +160,16 @@ class observables:
             for op_type in self.op_types:
                 time_op0 = time.time()
                 self.ops[op_type].val = expval(self.evecs,self.ops[op_type].op)
-                print("Time for calculating expectation value of operator "+op_type+":",time.time()-time_op0)
+                print("Time for calculating expectation value of operator "
+                      + op_type+":",time.time()-time_op0)
             for op_type_k in self.op_types_k:
-                 time_op0 = time.time()
-                 self.ops[op_type_k].val = self.ops[op_type_k].expval(self.k_space.k_space_red,self.evals,self.evecs)
-                 print("Time for calculating expectation value of operator "+op_type_k+":",time.time()-time_op0)
+                time_op0 = time.time()
+                self.ops[op_type_k].val = self.ops[op_type_k].expval(
+                    self.k_space.k_space_red,self.evals,self.evecs)
+                print("Time for calculating expectation value of operator "
+                      + op_type_k+":",time.time()-time_op0)
 
-        if all_k == True:
+        if all_k:
             print("Diagonalizing all k-points in parallel.")
             calc_all_k()
         else:
@@ -164,23 +179,22 @@ class observables:
             else:
                 print("Running in serial mode.")
                 calc_serial()
-            
 
-        if self.ham.ef != None:
+        if self.ham.ef is not None:
             print("Shifting eigenvalues w.r.t. Fermi level...")
             self.evals -= self.ham.ef
 
         # Run post-processing
-        if post == True:
+        if post:
             self.post_ops()
         # Write observables
-        if write == True:
+        if write:
             self.write_ops(bmin,bmax)
 
     def post_ops(self):
         '''If defined, run the post-processing for the operators.'''
         for op_type in self.op_types+self.op_types_k:
-            if type(self.ops[op_type].post) != None:
+            if type(self.ops[op_type].post) is not None:
                 print("Running post-processing for operator "+op_type+".")
                 self.ops[op_type].post(self.evals)
 
@@ -194,13 +208,15 @@ class observables:
            self.write_k_int()
 
     def sphere_winding(self):
-        '''Calculates the Pontryagin-index for the observables, calculated on a sphere.
+        '''Calculates the Pontryagin-index for the observables,
+           calculated on a sphere.
            Requires 'k_type="sphere_ster_proj"' !!!
         '''
         if self.k_space.k_type == "sphere_ster_proj":
             output = open(self.prefix+"pontryagin.dat","w")
             for op_type in self.op_types+self.op_types_k:
-                self.ops[op_type].sphere_winding(self.k_space.k_space_proj,self.k_space.n_points)
+                self.ops[op_type].sphere_winding(self.k_space.k_space_proj,
+                                                 self.k_space.n_points)
                 output.write("Calculating Pontryagin-index for operator "+op_type+".\n")
                 for band in range(self.ham.n_bands):
                     output.write("Band {b:3d}: S={i:7.4f}\n".format(b=(band+1),i=self.ops[op_type].pont[band]))
