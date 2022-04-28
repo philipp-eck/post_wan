@@ -63,8 +63,21 @@ class hamiltonian:
 
         self.set_lattice_vec(BRA_VEC)
 
-        self.hk_path     = np.einsum_path("ikl,ai->akl",self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],np.array([[0,0,0]])))/self.R[:,3], optimize='optimal')[0]
-        self.del_hk_path = np.einsum_path("ij,ikl,ai->ajkl",self.R[:,:3],self.hr, np.exp(1j*2*np.pi*np.einsum("ib,ab",self.R[:,:3],np.array([[0,0,0]])))/self.R[:,3], optimize='optimal')[0]
+        self.hk_path     = np.einsum_path(
+            "ikl,ai->akl",
+            self.hr,
+            np.exp(1j*2*np.pi*np.einsum("ib,ab",
+                                        self.R[:,:3],
+                                        np.array([[0,0,0]]))) / self.R[:,3],
+            optimize='optimal')[0]
+        self.del_hk_path = np.einsum_path(
+            "ij,ikl,ai->ajkl",
+            self.R[:,:3],
+            self.hr,
+            np.exp(1j*2*np.pi*np.einsum("ib,ab",
+                                        self.R[:,:3],
+                                        np.array([[0,0,0]])))/self.R[:,3],
+            optimize='optimal')[0]
 
     def read_HR(self, HR_file):
         '''Reads the wannier90_hr.dat and the R vectors,
@@ -101,8 +114,9 @@ class hamiltonian:
 
         # Build H(R)
         hr = np.array(hr_full[:,:,:,5] + 1j * hr_full[:,:,:,6])
-        # is this transpose correct? Yes, since it reproduces the DFT 
-        # spin-texture correctly!!! This might not be considererd in wannier tools!!! 
+        # is this transpose correct? Yes, since it reproduces the DFT
+        # spin-texture correctly!!!
+        # This might not be considererd in wannier tools!!!
         self.hr = np.transpose(hr,axes=(0,2,1))
 
         # Create R-vector array, last entry contains the weights
@@ -134,16 +148,17 @@ class hamiltonian:
            Performs Fouriert-transform at given point in reduced coordinates.
            Expects k_red.dim=2.
         '''
-        hk_out = np.einsum("Rmn,...R->...mn",
-                           self.hr,
-                           np.exp(1j*2*np.pi
-                                  *np.einsum("Rb,...b->...R",
-                                             self.R[:,:3],
-                                             k_red,
-                                             optimize=True)
-                                 )/self.R[:,3],
-                           dtype=np.csingle,
-                           optimize=True)
+        hk_out = np.einsum(
+            "Rmn,...R->...mn",
+            self.hr,
+            np.exp(1j*2*np.pi
+                   * np.einsum("Rb,...b->...R",
+                               self.R[:,:3],
+                               k_red,
+                               optimize=True)
+                   )/self.R[:,3],
+            dtype=np.csingle,
+            optimize=True)
 #       hk_out.dtype = np.csingle #Enforce csingle precission
         return hk_out
 
@@ -154,46 +169,51 @@ class hamiltonian:
                           dtype="np.csingle")
 
         def hk_k(i_k):
-            hk_out[i_k] = np.einsum("ikl,i",
-                                    self.hr,
-                                    np.exp(1j*2*np.pi
-                                           *np.einsum("ib,b",
-                                                      self.R[:,:3],
-                                                      k_red[i_k]))/self.R[:,3])
-        
-        Parallel(num_cores,prefer="threads",require='sharedmem')(
-                 delayed(hk_k)(i_k) for i_k in range(np.shape(k_red)[0]))
+            hk_out[i_k] = np.einsum(
+                "ikl,i",
+                self.hr,
+                np.exp(1j*2*np.pi
+                       * np.einsum("ib,b",
+                                   self.R[:,:3],
+                                   k_red[i_k]))/self.R[:,3])
+
+        Parallel(num_cores,
+                 prefer="threads",
+                 require='sharedmem')(
+            delayed(hk_k)(i_k) for i_k in range(np.shape(k_red)[0]))
         return hk_out
 
     def del_hk(self,k_red):
         '''Returns nabla_k H_k in cartesian coordinates. Expects k_red.dim=2.
            Remove out-commented part if testet sufficiently.
         '''
-        del_hk_out = 1j*np.einsum("Rc,Rmn,...R->...cmn",
-                                  self.R_cart,
-                                  self.hr,
-                                  np.exp(1j*2*np.pi*np.einsum("Rb,...b",
-                                                              self.R[:,:3],
-                                                              k_red))/self.R[:,3],
-                                  optimize=True)
+        del_hk_out = 1j*np.einsum(
+            "Rc,Rmn,...R->...cmn",
+            self.R_cart,
+            self.hr,
+            np.exp(1j*2*np.pi*np.einsum("Rb,...b",
+                                        self.R[:,:3],
+                                        k_red))/self.R[:,3],
+            optimize=True)
         return del_hk_out
 
     def set_hr_spinless(self):
         '''Averages spin-blocks to obtain a spin-less Hamiltonian
            without SOC interaction.'''
         self.hr_spinless = (self.hr[:,:self.n_orb,:self.n_orb]
-                            +self.hr[:,self.n_orb:,self.n_orb:])/2.0
+                            + self.hr[:,self.n_orb:,self.n_orb:])/2.0
 
     def hk_spinless(self,k_red):
         '''Performs Fouriert-transform at given point in reduced coordinates.
         '''
         if type(self.hr_spinless) != np.ndarray:
             self.set_hr_spinless()
-        hk_out = np.einsum("Rmn,...R->...mn",
-                           self.hr_spinless,
-                           np.exp(1j*2*np.pi*np.einsum("Rb,...b->...R",
-                                                       self.R[:,:3],k_red))/self.R[:,3],
-                           optimize=True)
+        hk_out = np.einsum(
+            "Rmn,...R->...mn",
+            self.hr_spinless,
+            np.exp(1j*2*np.pi*np.einsum("Rb,...b->...R",
+                                        self.R[:,:3],k_red))/self.R[:,3],
+            optimize=True)
         return hk_out
 
     def make_spinfull(self):
@@ -237,7 +257,7 @@ class hamiltonian:
         '''Returns H(R) for given R.
            part = {"complex","real","imag"}
         '''
-        R_index = np.argwhere(np.all((self.R[:,:3]-R)==0,axis=1))
+        R_index = np.argwhere(np.all((self.R[:,:3]-R) == 0,axis=1))
         H_R = self.hr[R_index][0,0]
         if part == "complex":
             def print_H_R(i,j):
@@ -263,7 +283,7 @@ class hamiltonian:
     def mod_H_R(self,R,mat):
         '''Modifies the H(R) for given R by adding the matrix.
         '''
-        R_index = np.argwhere(np.all((self.R[:,:3]-R)==0, axis=1))
+        R_index = np.argwhere(np.all((self.R[:,:3]-R) == 0, axis=1))
         self.hr[R_index[0,0]] += mat
 
     def calc_ef(self,vecs=np.array([[9,9,9]])):
@@ -336,7 +356,7 @@ if __name__== "__main__":
     h_all = my_ham.hk(k)
     print("Time for all-k hk:", time.time()-time0a)
     print("Both methods return same H(k):",np.allclose(h_single,h_all))
-    if parallel == True:
+    if parallel:
         print("Testing k-parallelized FT:")
         time0p = time.time()
         h_all = my_ham.hk(k)
@@ -354,9 +374,11 @@ if __name__== "__main__":
     time0a = time.time()
     del_hk_all = my_ham.del_hk(k)
     print("Time for all-k hk:", time.time()-time0a)
-    print("Both methods return same del_H(k):",np.allclose(del_hk_single,del_hk_all))
+    print("Both methods return same del_H(k):",
+          np.allclose(del_hk_single,del_hk_all))
 
     print("Testing function 'set_ef':")
-    ham_sro = hamiltonian("test_ham/SRO_Ru_d_wo_soc.dat",real_vec,False,N_ELEC=4)
+    ham_sro = hamiltonian("test_ham/SRO_Ru_d_wo_soc.dat",
+                          real_vec,False,N_ELEC=4)
     ham_sro.calc_ef()
     print("DFT Fermi-Level: 6.18885310")
