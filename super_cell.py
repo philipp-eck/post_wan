@@ -39,6 +39,8 @@ class super_cell(hamiltonian):
         self.n_orb    = self.sup_dim*self.bulk_ham.n_orb
         self.n_bands  = self.sup_dim*self.bulk_ham.n_bands
         self.n_elec   = self.sup_dim*self.bulk_ham.n_elec
+        self.ctype    = BULK_HAM.hr.dtype
+        
         if self.bulk_ham.basis is not None:
             self.basis    = np.kron(np.ones(self.sup_dim),self.bulk_ham.basis).astype(int)
         else:
@@ -80,7 +82,7 @@ class super_cell(hamiltonian):
         eps = 0.001
         self.R_prim = np.abs(np.around(np.einsum("ji,...j->...i",self.sup_vec,np.mod(self.R_frac+eps,1)-eps))).astype(int)
         #set up bulk Hamiltonian
-        self.hr = np.zeros((np.shape(self.bulk_ham.R)[0],self.sup_dim*self.bulk_ham.n_bands,self.sup_dim*self.bulk_ham.n_bands),dtype=complex)
+        self.hr = np.zeros((np.shape(self.bulk_ham.R)[0],self.sup_dim*self.bulk_ham.n_bands,self.sup_dim*self.bulk_ham.n_bands),dtype=self.ctype)
         #create lists containing all "basis" positions in the new super-cell, do this symmetrically to the origin
         basis_p = []
         basis_m = []

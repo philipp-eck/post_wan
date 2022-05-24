@@ -155,11 +155,12 @@ class hamiltonian:
                    * np.einsum("Rb,...b->...R",
                                self.R[:,:3],
                                k_red,
-                               optimize=True)
+                               optimize=True),
+                   dtype=np.csingle 
                    )/self.R[:,3],
             dtype=np.csingle,
+	    casting='unsafe',
             optimize=True)
-#       hk_out.dtype = np.csingle #Enforce csingle precission
         return hk_out
 
     def hk_parallel(self,k_red):

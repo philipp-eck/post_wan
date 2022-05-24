@@ -11,7 +11,7 @@ if parallel:
     while True:
         try:
             from joblib import Parallel, delayed
-        except ModuleNotFoundError:
+        except ImportError:
             print("module 'joblib' is not installed")
             break
         try:
@@ -19,7 +19,7 @@ if parallel:
             num_cores = multiprocessing.cpu_count()
             parallel = True
             break
-        except ModuleNotFoundError:
+        except ImportError:
             print("module 'multiprocessing' is not installed")
             break
 
