@@ -50,6 +50,7 @@ class hamiltonian:
     def __init__(self, HR_FILE, BRA_VEC=None, SPIN=False,
                  BASIS=None, EF=None, N_ELEC=None):
         '''Initializes the Hamiltonian class.'''
+        self.ctype  = np.cdouble #np.csingle,np.cdouble,np.clongdouble
         self.hr_file = HR_FILE
         self.spin    = SPIN
         if type(BASIS) == np.ndarray:
@@ -156,9 +157,9 @@ class hamiltonian:
                                self.R[:,:3],
                                k_red,
                                optimize=True),
-                   dtype=np.csingle 
+                   dtype=self.ctype 
                    )/self.R[:,3],
-            dtype=np.csingle,
+            dtype=self.ctype,
 	    casting='unsafe',
             optimize=True)
         return hk_out
@@ -167,7 +168,7 @@ class hamiltonian:
         '''Performs FT k-parallelized. Currently not used!!!
         '''
         hk_out = np.zeros((np.shape(k_red)[0],self.n_bands,self.n_bands),
-                          dtype="np.csingle")
+                          dtype=self.ctype)
 
         def hk_k(i_k):
             hk_out[i_k] = np.einsum(

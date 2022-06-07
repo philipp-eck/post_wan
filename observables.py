@@ -282,8 +282,10 @@ class observables:
                     output.write("\n")
                 output.close()
 
-        #val_b_int
+        self.write_b_int()
 
+        #val_b_int
+    def write_b_int(self):
         for op_type in self.op_types+self.op_types_k:
             if type(self.ops[op_type].val_b_int) ==  np.ndarray:
                 print("Writing band-integrated output for operator "+op_type+".")
