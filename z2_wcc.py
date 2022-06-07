@@ -99,7 +99,7 @@ class z2_wcc:
         plt.plot(self.gap[1],'r-')
         plt.show
 
-    def write_wcc(self):
+    def write_wcc(self,PREFIX=""):
         '''Writes the wannier charge centers and the largest gap to an output file'''
         print("Writing WCC output...")
         fss = "{k:8.4f}{g:8.4f}"
@@ -108,9 +108,9 @@ class z2_wcc:
         fss += " \n"
         for k3 in range(2):
             if k3 == 0:
-                output = open("WCC_gam.dat","w")
+                output = open(PREFIX+"WCC_gam.dat","w")
             else:
-                output = open("WCC_sur.dat","w")
+                output = open(PREFIX+"WCC_sur.dat","w")
             for k in range(self.n_pump[0]):
                 output.write(fss.format(k=0.5*k/(self.n_pump[0]-1),g=self.gap[k3,k],wcc=self.wcc[k3,k]))
             output.close()
