@@ -651,15 +651,15 @@ class operator:
 
         ### taken from w2dyn
        # sigma = .05 #* discr  # on average, take smoothen over 2 energy levels
-        wborder = 3*sigma
+        wborder = 3*sigma*wstep
        # wstep = .001 # put into small bins, and let the filter work its magic
         wmin = np.around(np.amin(evals) - wborder, 3)
         wmax = np.around(np.amax(evals) + wborder, 3) + 1e-4
         w = np.arange(wmin, wmax, wstep)
         self.val_k_int = np.zeros((np.shape(self.val)[1]+2,len(w)-1))
-        dos = np.histogram(evals,w)
+        dos = np.histogram(evals,w,density=True)
         self.val_k_int[0] = (dos[1][1:]+dos[1][:-1])/2
-        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(dos[0],sigma/wstep,truncate=20)/evals.shape[0]/wstep
+        self.val_k_int[1] = scipy.ndimage.filters.gaussian_filter1d(1.0*dos[0],sigma/wstep,truncate=20)/evals.shape[0]/wstep
 #       print("Integrated total DOS:",scipy.integrate.simps(self.val_k_int[1],self.val_k_int[0]))
 #       print("Summed total DOS:", np.sum(dos[0])/evals.shape[0])
         self.val_kE_int = np.zeros_like(self.val_k_int)
