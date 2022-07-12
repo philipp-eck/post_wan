@@ -323,7 +323,7 @@ class operator:
         #[np.fill_diagonal(Em_En[i],np.Inf) for i in range(k.shape[0])]
         #[np.fill_diagonal(Em_En[i],0.0001) for i in range(k.shape[0])]
         #Em_En += (0.0001*np.eye(self.ham.n_bands))[...,:,:]
-        Em_En[Em_En<=1E-8]=np.inf
+        Em_En[np.abs(Em_En)<=1E-8]=np.inf
         return Em_En
 
     def calc_vel(self,k,evecs,kind="standard"):
