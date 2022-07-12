@@ -190,11 +190,11 @@ class operator:
             u[ind,ind] = 1
             ind += 1
             for m in range(1,j+1,1):
-               u[ind  ,ind  ] = (-1)**m /np.sqrt(2)
-               u[ind  ,ind+1] =-(-1)**m *1j /np.sqrt(2) ### follows from backtransform
-               u[ind+1,ind  ] =   1/np.sqrt(2)
-               u[ind+1,ind+1] =  1j/np.sqrt(2)
-               ind += 2
+                u[ind  ,ind  ] = (-1)**m /np.sqrt(2)
+                u[ind  ,ind+1] =-(-1)**m *1j /np.sqrt(2) ### follows from backtransform
+                u[ind+1,ind  ] =   1/np.sqrt(2)
+                u[ind+1,ind+1] =  1j/np.sqrt(2)
+                ind += 2
 
         u = np.asmatrix(u)
 
@@ -322,7 +322,8 @@ class operator:
         Em_En -= np.einsum('...ij->...ji',Em_En)
         #[np.fill_diagonal(Em_En[i],np.Inf) for i in range(k.shape[0])]
         #[np.fill_diagonal(Em_En[i],0.0001) for i in range(k.shape[0])]
-        Em_En += (0.0001*np.eye(self.ham.n_bands))[...,:,:]
+        #Em_En += (0.0001*np.eye(self.ham.n_bands))[...,:,:]
+        Em_En[Em_En<=1E-8]=np.inf
         return Em_En
 
     def calc_vel(self,k,evecs,kind="standard"):

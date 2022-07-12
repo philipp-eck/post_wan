@@ -136,14 +136,12 @@ class k_space:
         '''
         if np.shape(self.vecs) != (3,3):
             print("Input vectors have the wrong shape!!!")
-        plane = np.zeros((self.n_points**2,3))
-        for i in range(self.n_points):
-            vec_0 = vecs[0] + vecs[1]*(i/(self.n_points-1)-0.5)
-            for j in range(3):
-                plane[i*self.n_points:(i+1)*self.n_points,j] = np.linspace(
-                    vec_0[j]-0.5*vecs[2,j],
-                    vec_0[j]+0.5*vecs[2,j],
-                    self.n_points)
+        plane = np.zeros((self.n_points,self.n_points,3))
+        plane += np.linspace((0,0,0),vecs[1],self.n_points)[:,None,:]
+        plane += np.linspace((0,0,0),vecs[2],self.n_points)[None,:,:]
+        plane += vecs[0]-(vecs[1]+vecs[2])/2.0
+        plane = plane.flatten().reshape((-1,3))
+
         return plane
 
     def Monkhorst(self,vecs):

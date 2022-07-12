@@ -47,7 +47,7 @@ class hamiltonian:
         del_hk_path # variable storing the best path for contraction the del_hk derivative, calculated at the gamma point
     '''
 
-    def __init__(self, HR_FILE, BRA_VEC=None, SPIN=False,
+    def __init__(self, HR_FILE=None, BRA_VEC=None, SPIN=False,
                  BASIS=None, EF=None, N_ELEC=None):
         '''Initializes the Hamiltonian class.'''
         self.ctype  = np.cdouble #np.csingle,np.cdouble,np.clongdouble
@@ -60,25 +60,38 @@ class hamiltonian:
         self.ef      = EF
         self.n_elec  = N_ELEC
 
-        self.read_HR(self.hr_file)
+        try:
+            self.read_HR(self.hr_file)
+        except:
+            self.R = None
+            self.hr= None
 
-        self.set_lattice_vec(BRA_VEC)
+        try:
+            self.set_lattice_vec(BRA_VEC)
+        except:
+            self.bra_vec = None
+            self.R_cart  = None
+            self.n_bands = None
+            self.n_orb   = None
 
-        self.hk_path     = np.einsum_path(
-            "ikl,ai->akl",
-            self.hr,
-            np.exp(1j*2*np.pi*np.einsum("ib,ab",
-                                        self.R[:,:3],
-                                        np.array([[0,0,0]]))) / self.R[:,3],
-            optimize='optimal')[0]
-        self.del_hk_path = np.einsum_path(
-            "ij,ikl,ai->ajkl",
-            self.R[:,:3],
-            self.hr,
-            np.exp(1j*2*np.pi*np.einsum("ib,ab",
-                                        self.R[:,:3],
-                                        np.array([[0,0,0]])))/self.R[:,3],
-            optimize='optimal')[0]
+        try:
+            self.hk_path     = np.einsum_path(
+                "ikl,ai->akl",
+                self.hr,
+                np.exp(1j*2*np.pi*np.einsum("ib,ab",
+                                            self.R[:,:3],
+                                            np.array([[0,0,0]]))) / self.R[:,3],
+                optimize='optimal')[0]
+            self.del_hk_path = np.einsum_path(
+                "ij,ikl,ai->ajkl",
+                self.R[:,:3],
+                self.hr,
+                np.exp(1j*2*np.pi*np.einsum("ib,ab",
+                                            self.R[:,:3],
+                                            np.array([[0,0,0]])))/self.R[:,3],
+                optimize='optimal')[0]
+        except:
+            pass
 
     def read_HR(self, HR_file):
         '''Reads the wannier90_hr.dat and the R vectors,
