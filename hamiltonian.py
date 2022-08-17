@@ -50,7 +50,7 @@ class hamiltonian:
     def __init__(self, HR_FILE=None, BRA_VEC=None, SPIN=False,
                  BASIS=None, EF=None, N_ELEC=None):
         '''Initializes the Hamiltonian class.'''
-        self.ctype  = np.cdouble #np.csingle,np.cdouble,np.clongdouble
+        self.ctype  = np.csingle #np.csingle,np.cdouble,np.clongdouble
         self.hr_file = HR_FILE
         self.spin    = SPIN
         if type(BASIS) == np.ndarray:
@@ -63,6 +63,7 @@ class hamiltonian:
         try:
             self.read_HR(self.hr_file)
         except:
+            print("No input read, creating empty Hamiltonian object.")
             self.R = None
             self.hr= None
 
@@ -157,23 +158,27 @@ class hamiltonian:
         else:
             print("Bravais vectors have the wrong shape or are not defined!!!")
 
+    def eikR(self,k_red):
+        return np.exp(
+            1j*2*np.pi*np.einsum(
+                "Rb,...b->...R",
+                self.R[:,:3],
+                k_red,
+                optimize=True),
+            dtype=self.ctype)
+
     def hk(self,k_red):
         '''
            Performs Fouriert-transform at given point in reduced coordinates.
            Expects k_red.dim=2.
         '''
         hk_out = np.einsum(
-            "Rmn,...R->...mn",
+            "Rmn,...R,R->...mn",
             self.hr,
-            np.exp(1j*2*np.pi
-                   * np.einsum("Rb,...b->...R",
-                               self.R[:,:3],
-                               k_red,
-                               optimize=True),
-                   dtype=self.ctype 
-                   )/self.R[:,3],
+            self.eikR(k_red),
+            1/self.R[:,3],
             dtype=self.ctype,
-	    casting='unsafe',
+            casting='unsafe',
             optimize=True)
         return hk_out
 
@@ -185,12 +190,13 @@ class hamiltonian:
 
         def hk_k(i_k):
             hk_out[i_k] = np.einsum(
-                "ikl,i",
+                "ikl,i,i",
                 self.hr,
-                np.exp(1j*2*np.pi
-                       * np.einsum("ib,b",
-                                   self.R[:,:3],
-                                   k_red[i_k]))/self.R[:,3])
+                self.eikR(i_k),
+                1/self.R[:,3],
+                dtype=self.ctype,
+                casting='unsafe',
+                optimize=True)
 
         Parallel(num_cores,
                  prefer="threads",
@@ -203,12 +209,13 @@ class hamiltonian:
            Remove out-commented part if testet sufficiently.
         '''
         del_hk_out = 1j*np.einsum(
-            "Rc,Rmn,...R->...cmn",
+            "Rc,Rmn,...R,R->...cmn",
             self.R_cart,
             self.hr,
-            np.exp(1j*2*np.pi*np.einsum("Rb,...b",
-                                        self.R[:,:3],
-                                        k_red))/self.R[:,3],
+            self.eikR(k_red),
+            1/self.R[:,3],
+            dtype=self.ctype,
+            casting='unsafe',
             optimize=True)
         return del_hk_out
 
@@ -361,9 +368,11 @@ if __name__== "__main__":
     print(np.shape(my_ham.hk(k)))
     print("Testing single and all k-point h_k")
     time0s = time.time()
-    k = np.random.rand(1000,3)
-    h_single = np.zeros((1000,my_ham.n_bands,my_ham.n_bands),dtype="complex")
-    for i in range(1000):
+    nk_rand = 100
+    k = np.random.rand(nk_rand,3)
+    h_single = np.zeros((nk_rand,my_ham.n_bands,
+        my_ham.n_bands),dtype="complex")
+    for i in range(nk_rand):
         h_single[i] = my_ham.hk(np.array([k[i]]))
     print("Time for single hk:", time.time()-time0s)
     print("Testing all k-point FT")
@@ -379,10 +388,10 @@ if __name__== "__main__":
 
     print("Testing single and all k-point del_h_k")
     time0s = time.time()
-    k = np.random.rand(1000,3)
-    del_hk_single = np.zeros((1000,3,my_ham.n_bands,my_ham.n_bands),
+    k = np.random.rand(nk_rand,3)
+    del_hk_single = np.zeros((nk_rand,3,my_ham.n_bands,my_ham.n_bands),
                              dtype="complex")
-    for i in range(1000):
+    for i in range(nk_rand):
         del_hk_single[i] = my_ham.del_hk(np.array([k[i]]))
     print("Time for single hk:", time.time()-time0s)
     print("Testing all k-point FT")
@@ -390,8 +399,7 @@ if __name__== "__main__":
     del_hk_all = my_ham.del_hk(k)
     print("Time for all-k hk:", time.time()-time0a)
     print("Both methods return same del_H(k):",
-          np.allclose(del_hk_single,del_hk_all))
-
+          np.allclose(del_hk_single,del_hk_all,atol=1e-04))
     print("Testing function 'set_ef':")
     ham_sro = hamiltonian("test_ham/SRO_Ru_d_wo_soc.dat",
                           real_vec,False,N_ELEC=4)
