@@ -98,7 +98,7 @@ class observables:
         shape_evec = self.k_space.k_space_red.shape[:-1] + (self.ham.n_bands,
                                                             self.ham.n_bands)
         self.evals = np.zeros(shape_eval)
-        self.evecs = np.zeros(shape_evec,dtype=np.csingle)
+        self.evecs = np.zeros(shape_evec,dtype=self.ham.ctype)
 
         def calc_k(i_k):
             '''Calls expval() for each operator on a single k-point.
@@ -153,7 +153,12 @@ class observables:
             hk = self.ham.hk(self.k_space.k_space_red)
             print("Time for running H(k) FT:",time.time()-time_hk)
             time_eigh = time.time()
-            self.evals,self.evecs = np.linalg.eigh(hk,UPLO="U")
+            if not self.op_types and not self.op_types_k:
+                print("No operators given, only eigenvalues are calculated.")
+                self.evals = np.linalg.eigvalsh(hk,UPLO="U")
+                self.evecs = None
+            else:
+                self.evals,self.evecs = np.linalg.eigh(hk,UPLO="U")
             del hk
             print("Time for diagonalizing H(k):",time.time()-time_eigh)
 
