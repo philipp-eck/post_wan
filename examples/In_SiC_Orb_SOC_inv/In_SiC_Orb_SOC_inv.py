@@ -44,7 +44,7 @@ K_space = k_space(ktype,kbasis,vecs,bra_vec,npoints)
 #### Defining operators
 
 op_types  =["S","L","J"]
-op_types_k=["BC","BC_S","BC_mag","Orb_SOC_inv"]
+op_types_k=["BC","BC_S","BC_mag","Orb_SOC_inv","E_triang"]
 #op_types_k = ["E_triang"]
 
 #### Running calculation
