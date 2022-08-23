@@ -379,44 +379,6 @@ class operator:
         BC =-2*np.imag(np.einsum('...dji,...dji->...di',np.roll(np.conj(m_del_n),-1,axis=-3),np.roll(m_del_n,-2,axis=-3),optimize=True))
         return BC
 
-### Not needed anymore, can be deleted if function BC_op_expval is sufficiently tested
-###    def BC_spin_expval(self,k=None,evals=None,evecs=None):
-###        ''' Calculates Berry curvature:
-###                <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
-###        m = -Im -----------------------------------
-###                            (E_m - E_n)^2
-###        Note: the expectation value <m|nabla_k H_k|n>/(E_m - E_n) are written as line vectors in m_del_n.
-###        use np.roll to generate the permutation.
-###        '''
-###
-###        Em_En    = self.calc_Em_En(k,evals)
-###        m_del_n  = self.calc_vel(k,evecs,"spin")
-###        m_del_n /= Em_En[:,None,None]
-###        m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
-####       BC_spin =-2*np.imag(np.einsum('kcsji,kcji->kcsi',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True))
-###        BC_spin =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
-###                           -np.einsum('kcmn,kcsmn->kcsn',np.roll(m_del_n[:,:,0],-1,axis=1),np.roll(np.conj(m_del_n),-2,axis=1),optimize=True))
-###        BC_spin = BC_spin.reshape((k.shape[0],12,self.ham.n_bands))
-###        return BC_spin
-###
-###    def BC_oam_expval(self,k=None,evals=None,evecs=None):
-###        ''' Calculates Berry curvature:
-###                <n|nabla_k H_k|m>x<m|nabla_k H_k|n>
-###        m = -Im -----------------------------------
-###                            (E_m - E_n)^2
-###        Note: the expectation value <m|nabla_k H_k|n>/(E_m - E_n) are written as line vectors in m_del_n.
-###        use np.roll to generate the permutation.
-###        '''
-###
-###        Em_En    = self.calc_Em_En(k,evals)
-###        m_del_n  = self.calc_vel(k,evecs,"spin")
-###        m_del_n /= Em_En[:,None,None]
-###        m_del_n *= (1-np.eye(self.ham.n_bands))[None,None,None]
-###        BC_oam =-1*np.imag(np.einsum('kcsmn,kcmn->kcsn',np.roll(np.conj(m_del_n),-1,axis=1),np.roll(m_del_n[:,:,0],-2,axis=1),optimize=True)
-###                           -np.einsum('kcmn,kcsmn->kcsn',np.roll(m_del_n[:,:,0],-1,axis=1),np.roll(np.conj(m_del_n),-2,axis=1),optimize=True))
-###        BC_oam = BC_oam.reshape((k.shape[0],12,self.ham.n_bands))
-###        return BC_oam
-
     def BC_op_expval(self,k=None,evals=None,evecs=None):
         ''' General function for calculating the projected BC with velocity operator V = {v,op}.
         Calculates Berry curvature:
@@ -445,9 +407,9 @@ class operator:
         '''
 
         Em_En    = self.calc_Em_En(k,evals)
-        m_del_n  = self.calc_vel(k,evecs)
-        m_del_n /= Em_En[:,None]
-        orb_mom =+2*np.imag(np.einsum('...dji,...dji->...di',np.roll(np.conj(m_del_n),-1,axis=-3),np.roll(m_del_n*Em_En[:,None],-2,axis=-3),optimize=True))
+        m_del_n_EM  = self.calc_vel(k,evecs)
+        m_del_n = m_del_n_EM/Em_En[...,None,:,:]
+        orb_mom =+2*np.imag(np.einsum('...dji,...dji->...di',np.roll(np.conj(m_del_n),-1,axis=-3),np.roll(m_del_n_EM,-2,axis=-3),optimize=True))
         return orb_mom
  
     def Orb_SOC_inv_op(self,k=None,evals=None,evecs=None):
