@@ -224,6 +224,13 @@ class hamiltonian:
            without SOC interaction.'''
         self.hr_spinless = (self.hr[:,:self.n_orb,:self.n_orb]
                             + self.hr[:,self.n_orb:,self.n_orb:])/2.0
+    def make_spinless(self):
+        '''Averages spin-blocks to obtain a spin-less Hamiltonian
+           without SOC interaction.'''
+        self.set_hr_spinless()
+        self.hr = self.hr_spinless
+        self.n_bands = int(self.n_bands//2)
+        self.spin = False
 
     def hk_spinless(self,k_red):
         '''Performs Fouriert-transform at given point in reduced coordinates.
