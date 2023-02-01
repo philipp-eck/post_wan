@@ -397,6 +397,7 @@ if __name__== "__main__":
   
     print("Eigenvalues are identical?:",
           np.allclose(o_flat.evals.flatten(),o_high.evals.flatten()))
+    print("Max deviation:",np.amax(np.abs(o_flat.evals.flatten()-o_high.evals.flatten())))
     print("Eigenvectors are identical?:",
           np.allclose(o_flat.evecs.flatten(),o_high.evecs.flatten()))
     for myops in op_types+op_types_k:

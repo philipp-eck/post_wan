@@ -152,9 +152,11 @@ class k_space:
         print("Creating a Gamma-centered Monkhorst grid",
               "with {v[0]:d}x{v[1]:d}x{v[2]:d} samples...".format(v=vecs[0]))
         out = np.zeros((vecs[0,0],vecs[0,1],vecs[0,2],3))
-        out[:,:,:,0] = np.linspace(0,1,vecs[0,0],endpoint=False)[:,None,None]-0.5 
-        out[:,:,:,1] = np.linspace(0,1,vecs[0,1],endpoint=False)[None,:,None]-0.5
-        out[:,:,:,2] = np.linspace(0,1,vecs[0,2],endpoint=False)[None,None]  -0.5 
+        def Gamma_centered(VEC):
+            return (np.linspace(0,1,VEC,endpoint=False)+0.5)%1.0-0.5
+        out[:,:,:,0] = Gamma_centered(vecs[0,0])[:,None,None] 
+        out[:,:,:,1] = Gamma_centered(vecs[0,1])[None,:,None]
+        out[:,:,:,2] = Gamma_centered(vecs[0,2])[None,None,:]   
         out = out.flatten().reshape((-1,3))
         return out
 

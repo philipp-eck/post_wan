@@ -59,7 +59,8 @@ class z2_wcc:
             #sort for calculating largest gap
             #likely not needed
             self.wcc[k3] = np.sort(self.wcc[k3],axis=1)
-            gap = (np.roll(self.wcc[k3],-1,axis=1)+1E-5*0-self.wcc[k3])%1
+            gap = (np.roll(self.wcc[k3],-1,axis=1)+1E-5*0-self.wcc[k3])
+            gap[:,-1] +=1 #Safer choice then using the modulo operator
             gap_i = np.argmax(gap,axis=1)
             for k1 in range(self.n_pump[0]):
                 self.gap[k3,k1] = (self.wcc[k3,k1,gap_i[k1]]+gap[k1,gap_i[k1]]/2.0)%1
